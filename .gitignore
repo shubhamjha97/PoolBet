@@ -1,0 +1,15 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Local data / secrets / artifacts
+*.db
+.vapid.json
+.env
+web/uploads/
+
+# OS / logs
+.DS_Store
+*.log

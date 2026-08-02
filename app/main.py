@@ -53,6 +53,12 @@ def health():
     return {"status": "ok", "service": "poolbet"}
 
 
+# ---- React migration preview (served under /next while the vanilla app stays at /) ----
+DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if DIST_DIR.exists():
+    app.mount("/next", StaticFiles(directory=DIST_DIR, html=True), name="next")
+
+
 # ---- frontend (served by the same server) ----
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")

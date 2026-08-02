@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Light theme */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 6%;
+    --primary: 156 90% 30%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 90 12% 96%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 90 10% 95%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 156 40% 94%;
+    --accent-foreground: 156 90% 24%;
+    --destructive: 336 80% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 90%;
+    --input: 0 0% 88%;
+    --ring: 156 90% 30%;
+    --yes: 156 90% 30%;
+    --no: 336 80% 46%;
+    --radius: 0.9rem;
+  }
+
+  /* Dark theme — OLED black + neon (the star) */
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 80 8% 96%;
+    --card: 240 5% 4%;
+    --card-foreground: 80 8% 96%;
+    --popover: 240 6% 5%;
+    --popover-foreground: 80 8% 96%;
+    --primary: 156 100% 50%;
+    --primary-foreground: 156 90% 6%;
+    --secondary: 240 5% 8%;
+    --secondary-foreground: 80 8% 96%;
+    --muted: 240 5% 8%;
+    --muted-foreground: 100 3% 60%;
+    --accent: 240 5% 10%;
+    --accent-foreground: 156 100% 50%;
+    --destructive: 336 100% 59%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 13%;
+    --input: 0 0% 15%;
+    --ring: 156 100% 50%;
+    --yes: 156 100% 50%;
+    --no: 336 100% 59%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    letter-spacing: -0.01em;
+    /* non-zoomable / non-pannable app surface */
+    touch-action: pan-y;
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
+  ::selection { @apply bg-primary/25; }
+}
+
+@layer components {
+  /* frosted app-bar */
+  .glass {
+    background: hsl(var(--background) / 0.6);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+  }
+  /* tactile press — pairs with active:scale-95 on interactive elements */
+  .tactile { @apply transition-transform duration-100 active:scale-95; }
+  /* ambient animated grid (dark only) */
+  .ambient-grid::before {
+    content: "";
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(hsl(var(--primary) / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.03) 1px, transparent 1px);
+    background-size: 54px 54px;
+    -webkit-mask-image: radial-gradient(120% 60% at 50% 0%, #000 0%, transparent 72%);
+    mask-image: radial-gradient(120% 60% at 50% 0%, #000 0%, transparent 72%);
+    animation: grid-pan 42s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}

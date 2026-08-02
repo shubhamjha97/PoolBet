@@ -10,6 +10,10 @@ __pycache__/
 .env
 web/uploads/
 
+# Node / Vite
+node_modules/
+frontend/dist/
+
 # OS / logs
 .DS_Store
 *.log

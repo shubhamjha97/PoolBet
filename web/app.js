@@ -107,8 +107,9 @@ function renderAccessRequest(groupId, groupName, opts) {
 }
 
 function topbar() {
+  const admin = state.isAdmin ? `<button class="btn ghost sm" onclick="renderAdmin()">Admin</button>` : "";
   $("#who").innerHTML = state.user
-    ? `<span>Hi, <b>${esc(state.user.name)}</b></span>
+    ? `${admin}<span class="hi-name">Hi, <b>${esc(state.user.name)}</b></span>
        <button class="btn ghost sm" onclick="Nav.logout()">Log out</button>`
     : "";
 }
@@ -135,6 +136,9 @@ const HERO_SVG = `
     <circle class="hero-dot" cx="230" cy="20" r="4.5" fill="#00ff9c" filter="url(#hglow)"/>
   </svg>`;
 
+const G_ICON = `<svg viewBox="0 0 48 48" width="16" height="16" style="vertical-align:-3px;margin-right:7px"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
+const A_ICON = `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" style="vertical-align:-3px;margin-right:7px"><path d="M16.365 1.43c0 1.14-.42 2.2-1.12 2.98-.84.95-2.2 1.68-3.32 1.6-.14-1.1.42-2.28 1.1-3.02.78-.86 2.16-1.5 3.34-1.56zM20.5 17.2c-.6 1.38-.88 2-1.66 3.22-1.08 1.7-2.6 3.82-4.48 3.84-1.68.02-2.1-1.09-4.38-1.08-2.28.01-2.74 1.1-4.42 1.08-1.88-.02-3.32-1.94-4.4-3.64C-1.02 16.13-1.3 9.9 1.9 6.62 3.02 5.4 4.64 4.65 6.32 4.64c1.7-.02 2.77 1.09 4.18 1.09 1.36 0 2.18-1.12 4.14-1.1 1.5.02 3.1.82 4.24 2.24-3.72 2.04-3.12 7.36.72 8.33z"/></svg>`;
+
 function renderAuth() {
   topbar();
   authFormMode = null;
@@ -152,6 +156,9 @@ function renderAuth() {
         <div class="field"><label>Name</label><input id="name" placeholder="e.g. Alex" maxlength="60" autocomplete="username" /></div>
         <div class="field"><label>Password</label><input id="pw" type="password" placeholder="at least 4 characters" autocomplete="new-password" /></div>
         <button class="btn" style="width:100%" id="go">Create account</button>
+        <div class="oauth-sep"><span>or</span></div>
+        <button type="button" class="btn ghost oauth-btn" style="width:100%" onclick="googleLogin()">${G_ICON} Continue with Google</button>
+        <button type="button" class="btn ghost oauth-btn" style="width:100%;margin-top:8px" onclick="toast('Apple sign-in is coming soon','err')">${A_ICON} Continue with Apple</button>
       </div></div></div>
     </div></div>`;
 
@@ -204,6 +211,7 @@ async function renderHome() {
     <div class="row" style="margin-bottom:14px">
       <button class="btn" id="new">+ New group</button>
       <button class="btn ghost" id="join">Join with code</button>
+      <button class="btn ghost" id="notif" title="Enable notifications" aria-label="Enable notifications" style="margin-left:auto">🔔</button>
     </div>
     <div id="joinDrop" class="join-drop"><div><div class="join-row">
       <input id="jc" placeholder="Invite code" maxlength="6" style="text-transform:uppercase;letter-spacing:.12em" />
@@ -211,6 +219,7 @@ async function renderHome() {
     </div></div></div>
     <div id="groups" class="stack"></div>`;
   $("#new").onclick = showCreateGroup;
+  $("#notif").onclick = enableNotifications;
   $("#join").onclick = () => {
     const drop = $("#joinDrop");
     const open = drop.classList.toggle("open");
@@ -305,7 +314,8 @@ async function renderGroup(id) {
       <div><a onclick="Nav.home()" style="cursor:pointer;font-size:13px">← groups</a>
         <h1 style="margin-top:6px">${esc(g.name)}</h1></div>
       <div style="text-align:right"><div class="muted" style="font-size:12px">your balance</div>
-        <div class="tnum" style="font-weight:800;font-size:24px">${me ? fmt(me.balance) : "—"}</div></div>
+        <div class="tnum" style="font-weight:800;font-size:24px">${me ? fmt(me.balance) : "—"}</div>
+        <button class="btn ghost sm" style="margin-top:5px" onclick="buyIn('${g.id}')">+ Buy in</button></div>
     </div>
     <div class="row" style="margin:8px 0 14px;flex-wrap:wrap">
       <span class="muted" style="font-size:13px">invite code</span>
@@ -317,6 +327,7 @@ async function renderGroup(id) {
     <div class="tabs">
       <button class="tab ${groupTab === "markets" ? "active" : ""}" onclick="setGroupTab('markets')">Markets</button>
       <button class="tab ${groupTab === "stats" ? "active" : ""}" onclick="setGroupTab('stats')">Stats</button>
+      <button class="tab ${groupTab === "timeline" ? "active" : ""}" onclick="setGroupTab('timeline')">Timeline</button>
     </div>
     <div id="tabContent"></div>`;
 
@@ -324,7 +335,55 @@ async function renderGroup(id) {
   loadPendingRequests(g.id);
 
   if (groupTab === "markets") renderMarketsTab(g, markets);
-  else renderStatsTab(g, markets);
+  else if (groupTab === "stats") renderStatsTab(g, markets);
+  else renderTimelineTab(g);
+}
+
+// Group timeline — derived from the backend Event commit log.
+async function renderTimelineTab(g) {
+  const box = $("#tabContent");
+  box.innerHTML = `<div class="empty">Loading timeline…</div>`;
+  let events = [];
+  try { events = await api("GET", `/groups/${g.id}/timeline`); }
+  catch { box.innerHTML = `<div class="empty">Timeline unavailable.</div>`; return; }
+  if (!events.length) { box.innerHTML = `<div class="empty">Nothing has happened yet.</div>`; return; }
+  box.innerHTML = `<div class="timeline">${events.map(timelineRow).join("")}</div>`;
+}
+
+function timelineRow(e) {
+  const p = e.payload || {};
+  return `<div class="tl-item"><div class="tl-dot"></div><div class="tl-body">
+    <div class="tl-text">${describeEvent(e, p)}</div>
+    <div class="tl-when">${esc(timeAgo(e.ts))}</div></div></div>`;
+}
+
+function describeEvent(e, p) {
+  const who = esc(e.actor_name || p.actor_name || "Someone");
+  const mq = p.market_question ? ` — <span class="muted">${esc(p.market_question)}</span>` : "";
+  switch (e.type) {
+    case "bet_placed": {
+      const name = p.anonymous ? esc(p.nickname_or_name || "An anonymous bettor") : who;
+      return `<b>${name}</b> bet <b>${fmt(p.amount)}</b> on <b style="color:var(--${p.side === "YES" ? "yes" : "no"})">${esc(p.side || "")}</b>${mq}`;
+    }
+    case "market_created": return `<b>${who}</b> opened a market${p.question ? ` — <span class="muted">${esc(p.question)}</span>` : ""}`;
+    case "market_resolved":
+    case "market_settled": return `Resolved <b>${esc(p.outcome || "")}</b>${p.fraction != null ? ` (${Math.round(Number(p.fraction) * 100)}%)` : ""}${mq}`;
+    case "buy_in": return `<b>${who}</b> bought in for <b>${fmt(p.amount)}</b>`;
+    case "group_join": return `<b>${esc(p.name || who)}</b> joined`;
+    case "group_create": return `<b>${who}</b> created the group`;
+    case "access_approved": return `<b>${esc(p.name || who)}</b> was let in`;
+    case "evidence_added": return `<b>${who}</b> added photo evidence${mq}`;
+    case "rollback": return `⏪ <b>State rolled back</b>`;
+    default: return `<b>${who}</b> · ${esc(e.type)}`;
+  }
+}
+
+function timeAgo(ts) {
+  const s = Math.max(0, (Date.now() - Date.parse(ts)) / 1000);
+  if (s < 60) return "just now";
+  const m = s / 60; if (m < 60) return `${Math.floor(m)}m ago`;
+  const h = m / 60; if (h < 24) return `${Math.floor(h)}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 // Owner-only: surface pending access requests with Approve buttons (403 for non-owners).
@@ -398,6 +457,16 @@ async function renderStatsTab(g, markets) {
     ${probCharts.length ? probCharts.map((pc) => `<div class="card" style="margin-bottom:10px"><div style="font-weight:600;font-size:14px;margin-bottom:6px">${esc(pc.q)}</div>${Charts.probability(pc.pts)}</div>`).join("") : emptyC}`;
 }
 
+const LINK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg>`;
+
+// Reconstruct the implied P(YES) path over time from a market's ordered bets.
+function oddsSeries(m) {
+  const sorted = [...m.bets].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+  let y = 0, n = 0; const pts = [];
+  sorted.forEach((b) => { if (b.side === "YES") y += Number(b.amount); else n += Number(b.amount); const t = y + n; pts.push({ t: Date.parse(b.created_at), yes: t ? y / t : 0.5 }); });
+  return pts;
+}
+
 function marketCard(m) {
   const total = Number(m.yes_pool) + Number(m.no_pool);
   const yesPct = total > 0 ? Math.round(Number(m.yes_pool) / total * 100) : 50;
@@ -411,7 +480,10 @@ function marketCard(m) {
     <div class="card-head" onclick="toggleMarket('${m.id}')">
       <div class="spread" style="align-items:flex-start">
         <div class="grow"><div style="font-weight:600;font-size:16px;margin-bottom:8px">${esc(m.question)}</div></div>
-        <span class="pill ${m.status}">${m.status}</span>
+        <div class="head-actions">
+          <button class="icon-btn" onclick="event.stopPropagation();copyMarketLink('${m.id}')" title="Copy link" aria-label="Copy market link">${LINK_ICON}</button>
+          <span class="pill ${m.status}">${m.status}</span>
+        </div>
       </div>
       <div class="odds">
         <div class="labels"><span class="y">YES ${total > 0 ? yesPct + "%" : "—"}</span><span class="n">${total > 0 ? noPct + "%" : "—"} NO</span></div>
@@ -450,6 +522,7 @@ function showCreateMarket(gid) {
   const local = new Date(def.getTime() - def.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
   openModal(`<h2 style="margin-top:0">New market</h2>
     <div class="field"><label>Question (YES / NO)</label><input id="mq" placeholder="Will the Chiefs cover the spread?" maxlength="280" /></div>
+    <div class="field"><label>Rules / how it resolves (optional)</label><textarea id="mr" rows="2" maxlength="2000" placeholder="e.g. Resolves YES if the final margin is 3+ points."></textarea></div>
     <div class="field"><label>Closes at (no bets after this)</label>
       <div class="chips" style="margin-bottom:9px">
         ${[["1h", "1 hr"], ["6h", "6 hr"], ["1d", "1 day"], ["3d", "3 days"], ["7d", "7 days"]]
@@ -462,6 +535,7 @@ function showCreateMarket(gid) {
     try {
       await api("POST", `/groups/${gid}/markets`, {
         question: $("#mq").value.trim(),
+        rules: $("#mr").value.trim() || null,
         closes_at: new Date($("#mc").value).toISOString(),
       });
       closeModal(); toast("Market created", "ok"); renderGroup(gid);
@@ -552,10 +626,20 @@ function marketPanel(m) {
       <span class="tnum">${fmt(b.amount)}${b.payout != null ? ` → <b>${fmt(b.payout)}</b>` : ""}</span></div>`).join("")
     : `<div class="muted" style="font-size:13px;padding:8px 0">No bets yet.</div>`;
 
-  return `<div class="spread" style="margin-bottom:14px">
-      <span class="muted" style="font-size:12px">by ${esc(m.proposer_name)} · pot ${fmt(Number(m.yes_pool) + Number(m.no_pool))}</span>
-      <button class="btn ghost sm" onclick="copyMarketLink('${m.id}')">Copy link</button>
-    </div>
+  const probPts = oddsSeries(m);
+  const oddsTl = probPts.length >= 2
+    ? `<div class="card odds-tl"><div class="tl-label">Odds over time</div>${Charts.probability(probPts)}</div>`
+    : "";
+  const rulesBlock = m.rules
+    ? `<div class="card" style="background:var(--surface-2);margin-bottom:14px"><div class="tl-label">Rules</div><div style="font-size:13px;white-space:pre-wrap">${esc(m.rules)}</div></div>`
+    : "";
+  const evidenceBlock = m.evidence_url
+    ? `<div class="card" style="background:var(--surface-2);margin-bottom:14px"><div class="tl-label">Evidence</div><img src="${esc(m.evidence_url)}" alt="result evidence" style="width:100%;border-radius:10px;display:block" /></div>`
+    : (ci.closed ? `<label class="btn ghost sm" style="display:inline-block;margin-bottom:14px">📷 Add photo evidence<input type="file" accept="image/*" style="display:none" onchange="uploadEvidence('${m.id}', this)" /></label>` : "");
+  return `<div class="muted" style="font-size:12px;margin-bottom:12px">by ${esc(m.proposer_name)} · pot ${fmt(Number(m.yes_pool) + Number(m.no_pool))}</div>
+    ${rulesBlock}
+    ${oddsTl}
+    ${evidenceBlock}
     ${action}
     <h2 style="margin:20px 0 6px">Bets</h2>${bets}`;
 }
@@ -608,6 +692,78 @@ window.settle = (id) => marketAction(async () => { const r = await api("POST", `
 function openModal(html) { $("#modal-root").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
 function closeModal() { $("#modal-root").innerHTML = ""; }
 window.openModal = openModal; window.closeModal = closeModal;
+
+// ---------- admin dashboard (commit log + rollback) ----------
+async function checkAdmin() {
+  try { const r = await api("GET", "/admin/me"); state.isAdmin = !!(r && r.is_admin); if (state.isAdmin) topbar(); }
+  catch { state.isAdmin = false; }
+}
+
+async function renderAdmin() {
+  topbar();
+  app().innerHTML = `
+    <a onclick="Nav.home()" style="cursor:pointer;font-size:13px">← back</a>
+    <h1 style="margin-top:6px">Admin</h1>
+    <p class="sub">The commit log — every action is appended here, and you can roll the whole app back to any snapshot.</p>
+    <h2>Rollback points</h2><div id="admSnaps" class="stack"></div>
+    <h2 style="margin-top:26px">Commit log</h2><div id="admEvents"></div>`;
+  try {
+    const snaps = await api("GET", "/admin/snapshots");
+    document.getElementById("admSnaps").innerHTML = snaps.length ? snaps.map((s) => `<div class="card spread">
+      <div><div style="font-weight:600">${esc(s.label || "snapshot")}</div>
+        <div class="muted" style="font-size:12px">${esc(timeAgo(s.created_at))}</div></div>
+      <button class="btn no sm" onclick="rollbackTo('${s.id}')">Roll back</button></div>`).join("") : `<div class="empty">No snapshots yet.</div>`;
+  } catch { document.getElementById("admSnaps").innerHTML = `<div class="empty">Unavailable.</div>`; }
+  try {
+    const evs = await api("GET", "/admin/events?limit=100");
+    document.getElementById("admEvents").innerHTML = evs.length ? `<div class="timeline">${evs.map(timelineRow).join("")}</div>` : `<div class="empty">Empty.</div>`;
+  } catch { document.getElementById("admEvents").innerHTML = `<div class="empty">Unavailable.</div>`; }
+}
+window.renderAdmin = renderAdmin;
+window.rollbackTo = async (sid) => {
+  if (!confirm("Roll the entire app state back to this snapshot? Everything after it is undone.")) return;
+  try { await api("POST", "/admin/rollback", { snapshot_id: sid }); toast("Rolled back ✓", "ok"); renderAdmin(); }
+  catch (e) { err(e); }
+};
+
+// ---------- buy-in / oauth ----------
+window.buyIn = async (gid) => {
+  try { await api("POST", `/groups/${gid}/buy-in`, {}); toast("Bought in 🪙", "ok"); renderGroup(gid); }
+  catch (e) { err(e); }
+};
+
+window.googleLogin = async () => {
+  // /auth/google/login returns 503 when unconfigured; probe so we don't dump JSON at the user.
+  try {
+    const r = await fetch("/auth/google/login", { redirect: "manual" });
+    if (r.status === 503) return toast("Google sign-in isn't configured yet — needs deployment", "err");
+  } catch { /* opaque redirect (configured) → fall through to navigate */ }
+  location.href = "/auth/google/login";
+};
+
+// ---------- push notifications ----------
+window.enableNotifications = async () => {
+  if (!window.Push || !Push.isSupported()) return toast("Notifications aren't supported on this browser", "err");
+  try {
+    const r = await Push.enable();
+    if (r && r.ok) toast("Notifications on 🔔", "ok");
+    else toast("Couldn't enable notifications" + (r && r.reason ? `: ${r.reason}` : ""), "err");
+  } catch (e) { toast((e && e.message) || "Enable failed", "err"); }
+};
+
+// ---------- photo evidence ----------
+window.uploadEvidence = async (mid, input) => {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const res = await fetch(`/markets/${mid}/evidence`, { method: "POST", headers: { authorization: "Bearer " + state.token }, body: fd });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || "upload failed");
+    toast("Evidence added", "ok");
+    if (state.group) await renderGroup(state.group.id);
+  } catch (e) { err(e); }
+};
 
 // ---------- pull-down search ----------
 window.onSearch = (q) => {
@@ -700,6 +856,9 @@ window.addEventListener("load", () => { if (!isStandalone()) showInstallButton()
 
 // ---------- boot ----------
 async function boot() {
+  // OAuth callback hands the token back in the fragment: /#/token=<api_token>
+  const tok = location.hash.match(/token=([^&]+)/);
+  if (tok) { const t = decodeURIComponent(tok[1]); localStorage.setItem("pb_token", t); state.token = t; setHash("#/"); }
   if (!state.token) return renderAuth();
   // Only a failed identity check logs you out — a later render error must not.
   try {
@@ -709,6 +868,8 @@ async function boot() {
     localStorage.removeItem("pb_token");
     return renderAuth();
   }
+  if (window.Telemetry) Telemetry.init();   // app_open + session timing
+  checkAdmin();                             // show Admin link if this user is an admin
   try { await handleRoute(); }
   catch (e) { err(e); }
 }

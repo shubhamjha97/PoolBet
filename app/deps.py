@@ -25,6 +25,13 @@ def current_user(
     return user
 
 
+def require_admin(user: User = Depends(current_user)) -> User:
+    """Gate admin-only endpoints. 403 unless the user has the admin flag."""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="admin only")
+    return user
+
+
 def require_membership(db: Session, group_id: str, user: User) -> Membership:
     m = db.scalar(
         select(Membership).where(

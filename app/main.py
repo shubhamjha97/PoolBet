@@ -10,11 +10,19 @@ from sqlalchemy.orm import Session
 from .database import Base, engine, get_db
 from .deps import current_user, require_membership
 from .models import Membership, User
-from .routers import auth, groups, markets, users
+from .push import init_vapid
+from .routers import admin, auth, events, groups, markets, oauth, push, users
 from .schemas import MemberOut
 
-# Create tables on startup. (For real migrations, swap in Alembic.)
+# Importing snapshots registers the after-commit listeners that append a Snapshot
+# whenever an Event is committed (the commit log is the source of truth for state).
+from . import snapshots  # noqa: E402,F401
+
+# Create tables on startup. (Alembic migrations are additive; see README.)
 Base.metadata.create_all(bind=engine)
+
+# Load or generate the VAPID keypair for Web Push (persisted to .vapid.json).
+init_vapid()
 
 app = FastAPI(
     title="PoolBet",
@@ -34,6 +42,10 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(groups.router)
 app.include_router(markets.router)
+app.include_router(events.router)
+app.include_router(push.router)
+app.include_router(oauth.router)
+app.include_router(admin.router)
 
 
 @app.get("/health", tags=["meta"])

@@ -27,6 +27,17 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* app-wide subtle animated grid behind everything */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(0,255,156,0.028) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,156,0.028) 1px, transparent 1px);
+  background-size: 54px 54px;
+  -webkit-mask-image: radial-gradient(120% 60% at 50% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(120% 60% at 50% 0%, #000 0%, transparent 72%);
+  animation: gridpan 42s linear infinite;
+}
+.wrap { position: relative; z-index: 1; }
 body {
   background:
     radial-gradient(120% 70% at 50% -8%, #0c0d0c 0%, #000 58%) fixed,
@@ -49,6 +60,14 @@ input, textarea, .amt-in { -webkit-user-select: text; user-select: text; }
 .tnum { font-variant-numeric: tabular-nums; }
 a { color: var(--neon); text-decoration: none; }
 button { font-family: inherit; }
+
+/* interaction + consistency polish */
+:focus-visible { outline: none; }
+button.btn:focus-visible, input:focus-visible, textarea:focus-visible, .tab:focus-visible, .icon-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--plane), 0 0 0 4px rgba(0,255,156,0.55);
+}
+#tabContent { animation: fadeUp .24s var(--bounce) both; }         /* smooth tab switches */
+h2 { animation: none; }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
 @keyframes popIn { 0% { opacity: 0; transform: scale(.92) translateY(8px); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
@@ -107,19 +126,31 @@ input:focus, select:focus { border-color: var(--neon); box-shadow: 0 0 0 3px rgb
 /* ---- buttons ---- */
 button.btn {
   padding: 11px 17px; border-radius: 11px; border: 1px solid transparent;
-  background: var(--accent); color: #04150e; font-weight: 640; font-size: 14px; cursor: pointer;
-  letter-spacing: -0.01em; transition: filter .15s, box-shadow .2s var(--ease), transform .06s, background .15s;
+  background: linear-gradient(180deg, #1cffab, var(--accent)); color: #04150e; font-weight: 650; font-size: 14px; cursor: pointer;
+  letter-spacing: -0.01em; box-shadow: 0 1px 0 rgba(255,255,255,0.22) inset, 0 2px 10px rgba(0,255,156,0.08);
+  transition: filter .15s, box-shadow .22s var(--ease), transform .1s var(--bounce), background .15s;
 }
-button.btn:hover { box-shadow: var(--glow-green); }
-button.btn:active { transform: translateY(1px); }
-button.btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
-button.btn.ghost { background: transparent; border-color: var(--hairline); color: var(--ink); }
-button.btn.ghost:hover { border-color: var(--ink-2); box-shadow: none; }
-button.btn.yes { background: var(--yes); color: #04150e; }
-button.btn.yes:hover { box-shadow: var(--glow-green); }
-button.btn.no  { background: var(--no); color: #fff; }
-button.btn.no:hover { box-shadow: var(--glow-mag); }
+button.btn:hover { box-shadow: 0 1px 0 rgba(255,255,255,0.28) inset, var(--glow-green); transform: translateY(-1px); }
+button.btn:active { transform: translateY(1px) scale(.99); }
+button.btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; transform: none; }
+button.btn.ghost { background: transparent; border-color: var(--hairline); color: var(--ink); box-shadow: none; }
+button.btn.ghost:hover { border-color: var(--ink-2); box-shadow: none; transform: translateY(-1px); }
+button.btn.yes { background: linear-gradient(180deg, #1cffab, var(--yes)); color: #04150e; }
+button.btn.yes:hover { box-shadow: 0 1px 0 rgba(255,255,255,0.28) inset, var(--glow-green); }
+button.btn.no  { background: linear-gradient(180deg, #ff5c99, var(--no)); color: #fff; box-shadow: 0 1px 0 rgba(255,255,255,0.22) inset, 0 2px 10px rgba(255,46,126,0.10); }
+button.btn.no:hover { box-shadow: 0 1px 0 rgba(255,255,255,0.28) inset, var(--glow-mag); }
 button.btn.sm { padding: 7px 13px; font-size: 13px; border-radius: 9px; }
+
+/* icon button (copy link, etc.) */
+.head-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--hairline); background: var(--surface-2); color: var(--ink-2); cursor: pointer; transition: all .15s var(--ease); }
+.icon-btn svg { width: 15px; height: 15px; }
+.icon-btn:hover { color: var(--neon); border-color: var(--neon); box-shadow: var(--glow-green); }
+
+/* odds-over-time card inside a market dropdown */
+.odds-tl { background: var(--surface-2); margin-bottom: 14px; padding: 14px; }
+.tl-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 8px; }
 
 /* ---- status dots ---- */
 .pill { display: inline-flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 600;
@@ -212,6 +243,29 @@ button.btn.sm { padding: 7px 13px; font-size: 13px; border-radius: 9px; }
 .seg-toggle button.sel-n { border-color: var(--no); color: var(--no); background: rgba(255,46,126,0.08); box-shadow: var(--glow-mag); }
 .bet-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--hairline-2); font-size: 14px; }
 
+/* ---- oauth buttons ---- */
+.oauth-sep { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; color: var(--muted); font-size: 12px; }
+.oauth-sep::before, .oauth-sep::after { content: ""; flex: 1; height: 1px; background: var(--hairline); }
+.oauth-btn { color: var(--ink); display: inline-flex; align-items: center; justify-content: center; }
+
+/* ---- textarea (rules) ---- */
+textarea { width: 100%; padding: 11px 13px; border-radius: 11px; border: 1px solid var(--hairline); background: var(--surface-2);
+  color: var(--ink); font-size: 15px; font-family: inherit; outline: none; resize: vertical; min-height: 56px;
+  transition: border-color .15s, box-shadow .15s; }
+textarea:focus { border-color: var(--neon); box-shadow: 0 0 0 3px rgba(0,255,156,0.12); }
+
+/* ---- timeline (commit log) ---- */
+.timeline { position: relative; }
+.tl-item { display: flex; gap: 13px; padding: 9px 0; position: relative; }
+.tl-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 8px var(--neon); margin-top: 5px; flex: 0 0 auto; z-index: 1; }
+.tl-item::before { content: ""; position: absolute; left: 4px; top: 15px; bottom: -9px; width: 1px; background: var(--hairline); }
+.tl-item:last-child::before { display: none; }
+.tl-body { flex: 1; min-width: 0; }
+.tl-text { font-size: 14px; line-height: 1.45; }
+.tl-when { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+@media (max-width: 520px) { .hi-name { display: none; } }
+
 /* ---- pull-down search ---- */
 .searchbar { max-height: 0; overflow: hidden; transition: max-height .28s var(--ease); background: var(--plane); border-bottom: 1px solid transparent; }
 .searchbar.open { max-height: 72px; border-bottom-color: var(--hairline-2); }
@@ -287,8 +341,10 @@ button.btn.sm { padding: 7px 13px; font-size: 13px; border-radius: 9px; }
 
 /* ---- topbar install button ---- */
 .topbar-right { display: flex; align-items: center; gap: 12px; }
-.install-btn { display: inline-flex; align-items: center; justify-content: center; padding: 7px; width: 34px; height: 34px; }
-.install-btn svg { width: 15px; height: 15px; }
+.install-btn { display: inline-flex; align-items: center; justify-content: center; padding: 6px; width: 38px; height: 38px;
+  color: var(--neon); border-color: rgba(0,255,156,0.35); }
+.install-btn svg { width: 22px; height: 22px; stroke-width: 2.2; }
+.install-btn:hover { color: var(--neon); border-color: var(--neon); box-shadow: var(--glow-green); }
 @media (prefers-reduced-motion: reduce) {
   .hero-yes, .hero-no, .hero-dot, .stack > *, #markets > *, .toast, .modal { animation: none !important; }
 }

@@ -1,8 +1,10 @@
+import uuid
 from collections import Counter
 from datetime import timedelta, timezone
 from decimal import Decimal
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -22,9 +24,11 @@ from ..models import (
     User,
     Vote,
     random_nickname,
+    record_event,
     record_txn,
     utcnow,
 )
+from ..push import send_push_to_users
 from ..schemas import (
     BetCreate,
     BetOut,
@@ -38,6 +42,18 @@ from ..schemas import (
 )
 
 router = APIRouter(tags=["markets"])
+
+# Photo-evidence uploads are written here and served via the /static mount.
+UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "web" / "uploads"
+_ALLOWED_IMAGE_EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+_MAX_EVIDENCE_BYTES = 6 * 1024 * 1024
+
+
+def _group_member_user_ids(db: Session, group_id: str, exclude_user_id: str | None = None) -> list[str]:
+    ids = db.scalars(
+        select(Membership.user_id).where(Membership.group_id == group_id)
+    ).all()
+    return [uid for uid in ids if uid != exclude_user_id]
 
 
 def _aware(dt):
@@ -80,6 +96,8 @@ def _serialize_market(db: Session, market: Market) -> MarketOut:
         id=market.id,
         group_id=market.group_id,
         question=market.question,
+        rules=market.rules,
+        evidence_url=market.evidence_url,
         status=market.status,
         closes_at=_aware(market.closes_at),
         proposer_name=proposer_user.name if proposer_user else "?",
@@ -116,10 +134,16 @@ def create_market(
         group_id=group_id,
         proposer_id=member.id,
         question=body.question,
+        rules=body.rules,
         closes_at=body.closes_at,
         status=MarketStatus.OPEN,
     )
     db.add(market)
+    db.flush()
+    record_event(
+        db, "market_create", actor_user_id=user.id, group_id=group_id,
+        market_id=market.id, question=market.question, actor_name=user.name,
+    )
     db.commit()
     db.refresh(market)
     return _serialize_market(db, market)
@@ -222,8 +246,30 @@ def place_bet(
         )
     )
     record_txn(db, member, -body.amount, TxnKind.BET, market_id=market.id)
+    record_event(
+        db, "bet_placed", actor_user_id=user.id, group_id=market.group_id,
+        market_id=market.id, side=Side(body.side).value,
+        amount=str(body.amount), anonymous=body.anonymous,
+        nickname_or_name=(nickname if body.anonymous else user.name),
+        actor_name=user.name if not body.anonymous else None,
+        market_question=market.question,
+    )
     db.commit()
     db.refresh(market)
+
+    # Notify the rest of the group (best-effort; never breaks the request).
+    try:
+        group = db.get(Group, market.group_id)
+        others = _group_member_user_ids(db, market.group_id, exclude_user_id=user.id)
+        send_push_to_users(
+            db, others,
+            title=f"New bet in {group.name}",
+            body=market.question,
+            url=f"/#/market/{market.id}",
+        )
+    except Exception:
+        pass
+
     return _serialize_market(db, market)
 
 
@@ -257,6 +303,12 @@ def propose_resolution(
         market.proposed_fraction = None
     market.resolution_proposed_at = utcnow()
     market.status = MarketStatus.RESOLVING
+    record_event(
+        db, "market_resolved", actor_user_id=user.id, group_id=market.group_id,
+        market_id=market.id, outcome=market.proposed_outcome,
+        fraction=(str(market.proposed_fraction) if market.proposed_fraction is not None else None),
+        market_question=market.question, actor_name=user.name,
+    )
     db.commit()
     db.refresh(market)
     return _serialize_market(db, market)
@@ -335,6 +387,12 @@ def _apply_settlement(db: Session, market: Market, outcome: str, fraction: Decim
     market.outcome_fraction = fraction if outcome == "SCALAR" else None
     market.resolved_at = utcnow()
     market.status = MarketStatus.RESOLVED
+    record_event(
+        db, "market_settled", group_id=market.group_id, market_id=market.id,
+        outcome=outcome,
+        fraction=(str(fraction) if fraction is not None and outcome == "SCALAR" else None),
+        market_question=market.question,
+    )
 
 
 @router.post("/markets/{market_id}/settle", response_model=MarketOut)
@@ -380,6 +438,58 @@ def settle_market(
     else:
         raise HTTPException(status_code=409, detail=f"cannot settle a {market.status} market")
 
+    db.commit()
+    db.refresh(market)
+
+    # Notify all members that the market has settled (best-effort).
+    try:
+        group = db.get(Group, market.group_id)
+        everyone = _group_member_user_ids(db, market.group_id)
+        send_push_to_users(
+            db, everyone,
+            title=f"{market.question} resolved",
+            body=f"Outcome: {market.outcome}",
+            url=f"/#/market/{market.id}",
+        )
+    except Exception:
+        pass
+
+    return _serialize_market(db, market)
+
+
+# ---------- photo evidence ----------
+@router.post("/markets/{market_id}/evidence", response_model=MarketOut)
+def upload_evidence(
+    market_id: str,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    """Attach a proof image (jpg/png/webp, <=6MB) to a market. Group members only."""
+    market = db.get(Market, market_id)
+    if not market:
+        raise HTTPException(status_code=404, detail="market not found")
+    require_membership(db, market.group_id, user)
+
+    ext = _ALLOWED_IMAGE_EXT.get((file.content_type or "").lower())
+    if not ext:
+        raise HTTPException(status_code=400, detail="file must be a jpg, png, or webp image")
+
+    data = file.file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="empty file")
+    if len(data) > _MAX_EVIDENCE_BYTES:
+        raise HTTPException(status_code=400, detail="image too large (max 6MB)")
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{uuid.uuid4()}.{ext}"
+    (UPLOAD_DIR / filename).write_bytes(data)
+
+    market.evidence_url = f"/static/uploads/{filename}"
+    record_event(
+        db, "evidence_uploaded", actor_user_id=user.id, group_id=market.group_id,
+        market_id=market.id, evidence_url=market.evidence_url,
+    )
     db.commit()
     db.refresh(market)
     return _serialize_market(db, market)

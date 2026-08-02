@@ -98,6 +98,7 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     # OAuth (Google) subject id — set when the account was created via social login.
     google_sub: Mapped[str | None] = mapped_column(String, unique=True, nullable=True, index=True)
+    is_admin: Mapped[bool] = mapped_column(nullable=False, default=False)
     api_token: Mapped[str] = mapped_column(String, unique=True, default=_token, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -255,6 +256,21 @@ class PushSubscription(Base):
     p256dh: Mapped[str] = mapped_column(String, nullable=False)
     auth: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Snapshot(Base):
+    """A point-in-time full dump of the domain tables, taken after each event.
+
+    `data` is {table_name: [row_dicts]} with JSON-safe values (Decimals->str,
+    datetimes->iso). Used to roll the whole app state back to a logged point.
+    """
+    __tablename__ = "snapshots"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    label: Mapped[str] = mapped_column(String, nullable=False)
+    after_event_id: Mapped[str | None] = mapped_column(ForeignKey("events.id"), nullable=True)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
 
 def record_event(

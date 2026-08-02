@@ -11,11 +11,13 @@ from ..deps import current_user, require_membership
 from ..models import (
     AccessRequest,
     AccessStatus,
+    Event,
     Group,
     Membership,
     Transaction,
     TxnKind,
     User,
+    record_event,
     record_txn,
 )
 from ..schemas import (
@@ -28,6 +30,7 @@ from ..schemas import (
     MemberOut,
     PnlPoint,
     PnlSeries,
+    TimelineItem,
 )
 
 router = APIRouter(prefix="/groups", tags=["groups"])
@@ -97,6 +100,7 @@ def create_group(
     db.add(membership)
     db.flush()  # need membership.id for the ledger entry
     record_txn(db, membership, starting, TxnKind.GRANT)
+    record_event(db, "group_create", actor_user_id=user.id, group_id=group.id, name=group.name, actor_name=user.name)
     db.commit()
     db.refresh(group)
     return _serialize_group(db, group)
@@ -127,6 +131,7 @@ def join_group(
     db.add(membership)
     db.flush()  # need membership.id for the ledger entry
     record_txn(db, membership, group.starting_credits, TxnKind.GRANT)
+    record_event(db, "group_join", actor_user_id=user.id, group_id=group.id, name=user.name, actor_name=user.name)
     db.commit()
     return _serialize_group(db, group)
 
@@ -227,6 +232,11 @@ def create_access_request(
 
     req = AccessRequest(group_id=group_id, user_id=user.id, status=AccessStatus.PENDING.value)
     db.add(req)
+    db.flush()
+    record_event(
+        db, "access_requested", actor_user_id=user.id, group_id=group_id,
+        name=user.name, actor_name=user.name,
+    )
     db.commit()
     db.refresh(req)
     return _serialize_access_request(req)
@@ -295,6 +305,79 @@ def approve_access_request(
         record_txn(db, membership, group.starting_credits, TxnKind.GRANT)
 
     req.status = AccessStatus.APPROVED.value
+    approved_user = db.get(User, req.user_id)
+    record_event(
+        db, "access_approved", actor_user_id=user.id, group_id=group_id,
+        approved_user_id=req.user_id,
+        name=approved_user.name if approved_user else None,
+        actor_name=user.name,
+    )
     db.commit()
     db.refresh(group)
     return _serialize_group(db, group)
+
+
+# ---------- re-buy-in ----------
+@router.post("/{group_id}/buy-in", response_model=GroupOut)
+def buy_in(
+    group_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    """Top the caller's own balance up by the group's starting_credits (a GRANT)."""
+    group = db.get(Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="group not found")
+    member = require_membership(db, group_id, user)
+
+    member.balance = member.balance + group.starting_credits
+    record_txn(db, member, group.starting_credits, TxnKind.GRANT)
+    record_event(
+        db, "buy_in", actor_user_id=user.id, group_id=group_id,
+        amount=str(group.starting_credits), actor_name=user.name,
+    )
+    db.commit()
+    db.refresh(group)
+    return _serialize_group(db, group)
+
+
+# ---------- group timeline (commit log) ----------
+@router.get("/{group_id}/timeline", response_model=list[TimelineItem])
+def group_timeline(
+    group_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    """Newest-first commit log of this group's events, derived from the Event log.
+
+    Each event's payload is self-contained (actor_name, market_question, etc.) so a
+    timeline line renders without extra lookups. Members only.
+    """
+    group = db.get(Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="group not found")
+    require_membership(db, group_id, user)
+
+    rows = db.execute(
+        select(Event, User)
+        .join(User, User.id == Event.actor_user_id, isouter=True)
+        .where(Event.group_id == group_id)
+        .order_by(Event.ts.desc(), Event.id.desc())
+    ).all()
+    items = []
+    for ev, u in rows:
+        payload = ev.payload or {}
+        # Prefer the payload's actor_name (it is None for anonymous bets, keeping
+        # them anonymous even in the timeline); else fall back to the joined user.
+        actor_name = payload["actor_name"] if "actor_name" in payload else (u.name if u else None)
+        items.append(
+            TimelineItem(
+                id=ev.id,
+                ts=_aware_iso(ev.ts),
+                type=ev.type,
+                actor_name=actor_name,
+                market_id=ev.market_id,
+                payload=payload,
+            )
+        )
+    return items

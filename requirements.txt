@@ -4,6 +4,14 @@ SQLAlchemy==2.0.36
 pydantic==2.10.4
 pydantic-settings==2.7.1
 python-dotenv==1.0.1
+# Multipart form parsing (photo-evidence uploads)
+python-multipart==0.0.32
+# Web Push (VAPID) notifications
+pywebpush==2.3.0
+# Google OAuth scaffold
+Authlib==1.7.2
+# DB migrations (additive; app still boots via Base.metadata.create_all)
+alembic==1.14.0
 # Postgres driver (only needed if DATABASE_URL points at Postgres)
 psycopg[binary]==3.2.3
 # --- dev/test ---

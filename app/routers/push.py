@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import current_user
-from ..models import PushSubscription, User
+from ..models import PushSubscription, User, record_event
 from ..push import public_key
 from ..schemas import OkOut, PublicKeyOut, PushSubscribeIn, PushUnsubscribeIn
 
@@ -40,6 +40,7 @@ def subscribe(
                 auth=body.keys.auth,
             )
         )
+    record_event(db, "push_subscribe", actor_user_id=user.id, actor_name=user.name)
     db.commit()
     return OkOut(ok=True)
 

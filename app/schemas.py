@@ -191,3 +191,34 @@ class PushUnsubscribeIn(BaseModel):
 
 class PublicKeyOut(BaseModel):
     public_key: str
+
+
+# ---------- admin / commit log ----------
+class AdminEventOut(BaseModel):
+    id: str
+    ts: str  # ISO8601 timestamp
+    type: str
+    actor_name: str | None
+    group_id: str | None
+    market_id: str | None
+    payload: dict
+
+
+class SnapshotOut(BaseModel):
+    id: str
+    created_at: str  # ISO8601 timestamp
+    label: str
+    after_event_id: str | None
+
+
+class RollbackIn(BaseModel):
+    snapshot_id: str
+
+
+class RollbackOut(BaseModel):
+    ok: bool
+    restored: dict[str, int]
+
+
+class AdminMeOut(BaseModel):
+    is_admin: bool

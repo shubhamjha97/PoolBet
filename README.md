@@ -27,6 +27,26 @@ uvicorn app.main:app --reload
 
 Open **http://localhost:8000/docs** for the interactive API.
 
+## Database migrations (Alembic)
+
+The app still boots by calling `Base.metadata.create_all` on startup, so no
+migration step is required for local/dev use. Alembic is provided **additively**
+for managed schema changes. `env.py` is wired to `app.database.Base.metadata` and
+reads the same `DATABASE_URL` as the app.
+
+```bash
+alembic upgrade head          # apply migrations to DATABASE_URL (defaults to sqlite)
+alembic revision --autogenerate -m "describe change"   # after editing models
+```
+
+The `baseline` migration represents the full current schema.
+
+## Push notifications (Web Push / VAPID)
+
+VAPID keys are read from `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`
+if set, otherwise generated once and persisted to `.vapid.json` so they are stable
+across restarts. The browser fetches the key from `GET /push/public-key`.
+
 ## Test
 
 ```bash

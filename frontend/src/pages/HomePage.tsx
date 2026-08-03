@@ -9,6 +9,7 @@ import { fmt } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
 import { PortfolioChart, type PortfolioPoint } from "@/components/PortfolioChart";
+import { avatarGradient } from "@/lib/avatar";
 
 interface Portfolio { points: PortfolioPoint[]; balance: number; start: number; pnl: number; }
 
@@ -206,7 +207,7 @@ export function HomePage() {
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-white/[0.045]">
+        <div className="divide-y divide-black/[0.06] dark:divide-white/[0.09]">
           {groups.map((g) => {
             const me = g.members.find((m) => m.user_id === user?.id);
             const bal = Number(me?.balance ?? 0);
@@ -217,7 +218,7 @@ export function HomePage() {
                 onClick={() => openGroup(g.id)}
                 className="flex w-full items-center gap-3 py-5 text-left transition-transform active:scale-[0.99]"
               >
-                <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 text-sm font-bold text-black">
+                <div className="grid size-9 shrink-0 place-items-center rounded-xl text-sm font-bold text-white" style={{ backgroundImage: avatarGradient(g.id) }}>
                   {g.name.trim().slice(0, 1).toUpperCase() || "•"}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -229,7 +230,7 @@ export function HomePage() {
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <div className="font-mono text-[15px] font-bold tabular-nums">{fmt(bal)}</div>
                   {glpnl !== 0 && (
-                    <span className={cn("rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums", glpnl >= 0 ? "bg-yes text-black" : "bg-no text-white")}>
+                    <span className={cn("rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums", glpnl >= 0 ? "bg-yes text-white" : "bg-no text-white")}>
                       {glpnl >= 0 ? "+" : ""}{fmt(glpnl)}
                     </span>
                   )}

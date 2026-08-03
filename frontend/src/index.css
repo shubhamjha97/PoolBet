@@ -80,18 +80,16 @@
   }
   /* tactile press — pairs with active:scale-95 on interactive elements */
   .tactile { @apply transition-transform duration-100 active:scale-95; }
-  /* ambient animated grid (dark only) */
-  .ambient-grid::before {
-    content: "";
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-      linear-gradient(hsl(var(--primary) / 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--primary) / 0.03) 1px, transparent 1px);
-    background-size: 54px 54px;
-    -webkit-mask-image: radial-gradient(120% 60% at 50% 0%, #000 0%, transparent 72%);
-    mask-image: radial-gradient(120% 60% at 50% 0%, #000 0%, transparent 72%);
-    animation: grid-pan 42s linear infinite;
-  }
+}
+
+/* GPU-composited ambient orbs (transform-only → 60fps, ~0 CPU) */
+@keyframes orb-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(8vmax, 5vmax, 0) scale(1.08); }
+}
+@keyframes orb-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-7vmax, -5vmax, 0) scale(1.1); }
 }
 
 @media (prefers-reduced-motion: reduce) {

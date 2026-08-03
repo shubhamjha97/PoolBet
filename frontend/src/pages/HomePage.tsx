@@ -217,12 +217,12 @@ export function HomePage() {
                 onClick={() => openGroup(g.id)}
                 className="flex w-full items-center gap-3 py-5 text-left transition-transform active:scale-[0.99]"
               >
-                <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-yes to-no text-sm font-bold text-black">
+                <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 text-sm font-bold text-black">
                   {g.name.trim().slice(0, 1).toUpperCase() || "•"}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-semibold">{g.name}</div>
-                  <div className="mt-0.5 truncate text-[13px] text-muted-foreground/60">
+                  <div className="mt-0.5 truncate text-[13px] text-muted-foreground">
                     {g.members.length} {g.members.length === 1 ? "member" : "members"}
                   </div>
                 </div>

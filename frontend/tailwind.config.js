@@ -21,11 +21,11 @@ export default {
       },
       // Skinnier overall feel — every weight utility runs lighter (Inter variable).
       fontWeight: {
-        normal: "380",
-        medium: "440",
-        semibold: "510",
-        bold: "580",
-        extrabold: "660",
+        normal: "340",
+        medium: "400",
+        semibold: "460",
+        bold: "520",
+        extrabold: "600",
       },
       colors: {
         border: "hsl(var(--border))",

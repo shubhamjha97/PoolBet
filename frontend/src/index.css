@@ -6,26 +6,26 @@
   /* Light theme */
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 6%;
+    --foreground: 0 0% 0%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 6%;
+    --card-foreground: 0 0% 0%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 6%;
+    --popover-foreground: 0 0% 0%;
     --primary: 130 92% 56%;              /* same bright gold-green as dark */
     --primary-foreground: 130 95% 6%;
     --secondary: 130 12% 96%;
     --secondary-foreground: 0 0% 10%;
     --muted: 130 10% 95%;
-    --muted-foreground: 0 0% 40%;
+    --muted-foreground: 215 16% 42%;
     --accent: 130 40% 94%;
     --accent-foreground: 130 60% 30%;
-    --destructive: 335 94% 67%;
+    --destructive: 346 88% 66%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 90%;
     --input: 0 0% 88%;
     --ring: 130 92% 56%;
     --yes: 130 94% 58%;                  /* same bright gold-green as dark */
-    --no: 335 94% 67%;
+    --no: 346 88% 66%;
     --radius: 0.9rem;
   }
 
@@ -45,13 +45,13 @@
     --muted-foreground: 220 9% 62%;      /* #8A8F9B dimmed meta-text */
     --accent: 220 12% 16%;
     --accent-foreground: 130 92% 62%;
-    --destructive: 335 94% 67%;          /* brighter neon pink */
+    --destructive: 346 88% 66%;          /* brighter neon pink */
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 100% / 0.055;         /* very faint — rely on surface contrast, not strokes */
     --input: 0 0% 100% / 0.08;
     --ring: 130 92% 56%;
     --yes: 130 94% 58%;                  /* bright gold-green — gains / YES / wins */
-    --no: 335 94% 67%;                   /* brighter neon pink */
+    --no: 346 88% 66%;                   /* brighter neon pink */
   }
 }
 
@@ -64,9 +64,13 @@
     /* non-zoomable / non-pannable app surface */
     touch-action: pan-y;
     overscroll-behavior-y: none;
+    overflow-x: hidden;
     -webkit-user-select: none;
     user-select: none;
   }
+  /* Hide scrollbars everywhere (app chrome, not a document) */
+  html { scrollbar-width: none; -ms-overflow-style: none; }
+  *::-webkit-scrollbar { width: 0; height: 0; display: none; }
   input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
   ::selection { @apply bg-primary/25; }
 
@@ -128,10 +132,11 @@
   60% { opacity: 1; }
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
-/* quick glow-burst when a slide-to-confirm commits */
+/* big glow-explosion when a slide-to-confirm commits */
 @keyframes pb-burst {
-  0% { opacity: 0.95; transform: scale(0.7); box-shadow: 0 0 26px 6px hsl(var(--primary) / 0.75); }
-  100% { opacity: 0; transform: scale(1.6); box-shadow: 0 0 70px 26px hsl(var(--primary) / 0); }
+  0% { opacity: 1; transform: scale(0.5); box-shadow: 0 0 50px 14px hsl(var(--primary) / 0.95); background: hsl(var(--primary) / 0.55); }
+  60% { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(2.6); box-shadow: 0 0 160px 70px hsl(var(--primary) / 0); background: hsl(var(--primary) / 0); }
 }
 /* live indicator — a soft breathing pulse (scale + opacity) */
 @keyframes pb-live {

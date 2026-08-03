@@ -69,7 +69,7 @@ export function SlideToConfirm({
   return (
     <div className="relative">
       {burstKey > 0 && (
-        <span key={burstKey} className="pointer-events-none absolute inset-0 rounded-full [animation:pb-burst_420ms_ease-out_forwards]" />
+        <span key={burstKey} className="pointer-events-none absolute inset-0 z-20 rounded-full [animation:pb-burst_600ms_cubic-bezier(.2,.7,.3,1)_forwards]" />
       )}
       <div
         ref={trackRef}

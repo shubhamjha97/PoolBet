@@ -150,10 +150,8 @@ export function GroupPage() {
         </div>
       )}
 
-      <LiveFeed events={liveEvents} groupId={id} onLocalEcho={addLocalComment} />
-
       <Tabs defaultValue="markets" onValueChange={() => haptic("select")}>
-        <TabsList className="fixed inset-x-0 bottom-0 z-40 grid h-[4.5rem] w-full grid-cols-5 gap-0 rounded-none border-0 border-t border-white/10 bg-background/80 p-0 pb-safe shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+        <TabsList className="fixed inset-x-0 bottom-0 z-40 grid h-[4.25rem] w-full grid-cols-5 gap-0 rounded-none border-0 border-t border-white/10 bg-background/80 p-0 pb-safe backdrop-blur-xl">
           {[
             { v: "markets", label: "Markets", Icon: TrendingUp },
             { v: "ranks", label: "Ranks", Icon: Trophy },
@@ -161,26 +159,33 @@ export function GroupPage() {
             { v: "settle", label: "Settle", Icon: Scale },
             { v: "timeline", label: "Log", Icon: ScrollText },
           ].map(({ v, label, Icon }) => (
-            <TabsTrigger key={v} value={v}
-              className="flex h-full flex-col items-center justify-center gap-1 rounded-none bg-transparent text-foreground/40 shadow-none transition-colors data-[state=active]:bg-transparent data-[state=active]:font-medium data-[state=active]:text-primary data-[state=active]:shadow-none">
-              <Icon className="size-5" />
-              <span className="text-[10px] font-medium tracking-wide">{label}</span>
+            <TabsTrigger key={v} value={v} aria-label={label}
+              className="flex h-full items-center justify-center rounded-none bg-transparent text-muted-foreground shadow-none transition-colors data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none">
+              <Icon className="size-6" strokeWidth={2} />
             </TabsTrigger>
           ))}
         </TabsList>
-        <TabsContent value="markets" className="mt-4">
-          <MarketsTab group={group} markets={markets} onRefresh={refresh} openMarketId={params.get("market")} />
+
+        <TabsContent value="markets" className="mt-2">
+          <LiveFeed events={liveEvents} groupId={id} onLocalEcho={addLocalComment} />
+          <div className="mt-5">
+            <MarketsTab group={group} markets={markets} onRefresh={refresh} openMarketId={params.get("market")} />
+          </div>
         </TabsContent>
-        <TabsContent value="ranks" className="mt-4">
+        <TabsContent value="ranks" className="mt-2">
+          <h2 className="mb-4 text-2xl font-semibold tracking-tight">Ranks</h2>
           <LeaderboardTab groupId={id} />
         </TabsContent>
-        <TabsContent value="stats" className="mt-4">
+        <TabsContent value="stats" className="mt-2">
+          <h2 className="mb-4 text-2xl font-semibold tracking-tight">Stats</h2>
           <StatsTab group={group} markets={markets} />
         </TabsContent>
-        <TabsContent value="settle" className="mt-4">
+        <TabsContent value="settle" className="mt-2">
+          <h2 className="mb-4 text-2xl font-semibold tracking-tight">Settle up</h2>
           <SettleTab groupId={id} groupName={group.name} />
         </TabsContent>
-        <TabsContent value="timeline" className="mt-4">
+        <TabsContent value="timeline" className="mt-2">
+          <h2 className="mb-4 text-2xl font-semibold tracking-tight">Log</h2>
           <TimelineTab groupId={id} />
         </TabsContent>
       </Tabs>

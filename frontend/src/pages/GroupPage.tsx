@@ -125,18 +125,20 @@ export function GroupPage() {
     <div className="space-y-5 pb-12">
       <div>
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> groups</Link>
-        <div className="mt-2 flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{group.name}</h1>
-          <div className="shrink-0 text-right">
-            <div className="text-xs text-muted-foreground">your balance</div>
-            <div className="text-3xl font-extrabold font-mono tabular-nums">{me ? fmt(me.balance) : "—"}</div>
-            <Button variant="outline" size="sm" className="tactile mt-1 active:scale-95" onClick={buyIn}><Plus className="size-3.5" /> Buy in</Button>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">invite code</span>
-          <span data-testid="invite-code" className="rounded-md border bg-secondary px-2.5 py-1 font-mono tracking-widest text-primary">{group.invite_code}</span>
-          <Button size="sm" className="tactile ml-auto active:scale-95" onClick={() => { setShareOpen(true); haptic("select"); }}><Share2 className="size-3.5" /> Share</Button>
+        {/* Robinhood-style left-aligned hero stack */}
+        <h1 className="mt-2 text-xl font-semibold tracking-tight opacity-90">{group.name}</h1>
+        <div className="mt-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">your balance</div>
+        <div className="font-mono text-[2.7rem] font-extrabold leading-none tracking-tight tabular-nums">{me ? fmt(me.balance) : "—"}</div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => { setShareOpen(true); haptic("select"); }}
+            className="tactile inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm active:scale-95"
+          >
+            <span className="text-muted-foreground">Code</span>
+            <span data-testid="invite-code" className="font-mono tracking-widest text-primary">{group.invite_code}</span>
+            <Share2 className="size-3.5 text-muted-foreground" />
+          </button>
+          <Button variant="outline" size="sm" className="tactile active:scale-95" onClick={buyIn}><Plus className="size-3.5" /> Buy in</Button>
         </div>
       </div>
 
@@ -155,7 +157,7 @@ export function GroupPage() {
       <LiveFeed events={liveEvents} groupId={id} onLocalEcho={addLocalComment} />
 
       <Tabs defaultValue="markets" onValueChange={() => haptic("select")}>
-        <TabsList className="fixed inset-x-0 bottom-0 z-40 grid h-[4.5rem] w-full grid-cols-5 gap-0 rounded-none border-0 border-t border-border bg-background/85 p-0 pb-safe backdrop-blur-xl">
+        <TabsList className="fixed inset-x-0 bottom-0 z-40 grid h-[4.5rem] w-full grid-cols-5 gap-0 rounded-none border-0 border-t border-white/10 bg-background/80 p-0 pb-safe shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-xl">
           {[
             { v: "markets", label: "Markets", Icon: TrendingUp },
             { v: "ranks", label: "Ranks", Icon: Trophy },
@@ -164,7 +166,7 @@ export function GroupPage() {
             { v: "timeline", label: "Log", Icon: ScrollText },
           ].map(({ v, label, Icon }) => (
             <TabsTrigger key={v} value={v}
-              className="flex h-full flex-col items-center justify-center gap-1 rounded-none bg-transparent text-muted-foreground shadow-none transition-colors data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none">
+              className="flex h-full flex-col items-center justify-center gap-1 rounded-none bg-transparent text-foreground/40 shadow-none transition-colors data-[state=active]:bg-transparent data-[state=active]:font-medium data-[state=active]:text-primary data-[state=active]:shadow-none">
               <Icon className="size-5" />
               <span className="text-[10px] font-medium tracking-wide">{label}</span>
             </TabsTrigger>

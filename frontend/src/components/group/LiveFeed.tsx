@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Radio, Send } from "lucide-react";
+import { Radio, Send, SmilePlus } from "lucide-react";
 import type { TimelineEvent } from "@/lib/types";
 import { fmt, timeAgo } from "@/lib/format";
 import { api } from "@/lib/api";
@@ -38,6 +38,7 @@ export function LiveFeed({ events, groupId, onLocalEcho }: {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [rx, setRx] = useState<{ counts: Record<string, Record<string, number>>; mine: Record<string, string[]> }>({ counts: {}, mine: {} });
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -71,40 +72,48 @@ export function LiveFeed({ events, groupId, onLocalEcho }: {
       <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         <Radio className="size-3 text-yes [animation:pb-live_1.8s_ease-in-out_infinite]" /> Live
       </div>
-      <div className="space-y-1">
+      <div className="divide-y divide-border/60">
         <AnimatePresence initial={false}>
-          {events.slice(0, 6).map((e) => (
-            <motion.div
-              key={e.id}
-              layout
-              initial={{ opacity: 0, y: -8, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25, ease: [0.34, 1.4, 0.5, 1] }}
-              className="text-sm"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className={e.type === "comment" ? "min-w-0 truncate" : "min-w-0 truncate text-muted-foreground"}>{describe(e)}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(e.ts)}</span>
-              </div>
-              {!e.id.startsWith("local-") && (
-                <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                  {[...new Set([...QUICK_REACTIONS, ...Object.keys(rx.counts[e.id] || {})])].map((em) => {
-                    const n = rx.counts[e.id]?.[em] ?? 0;
-                    if (n === 0 && !QUICK_REACTIONS.includes(em)) return null;
-                    const mineHas = (rx.mine[e.id] || []).includes(em);
-                    return (
+          {events.slice(0, 6).map((e) => {
+            const present = Object.entries(rx.counts[e.id] || {}).filter(([, n]) => n > 0);
+            const picking = pickerFor === e.id;
+            return (
+              <motion.div
+                key={e.id}
+                layout
+                initial={{ opacity: 0, y: -8, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: "auto" }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25, ease: [0.34, 1.4, 0.5, 1] }}
+                className="py-3 text-sm first:pt-1"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={e.type === "comment" ? "min-w-0 truncate font-medium" : "min-w-0 truncate text-muted-foreground"}>{describe(e)}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground/70">{timeAgo(e.ts)}</span>
+                </div>
+                {!e.id.startsWith("local-") && (present.length > 0 || picking) && (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                    {present.map(([em, n]) => (
                       <button key={em} onClick={() => react(e.id, em)}
                         className={cn("rounded-full border px-1.5 py-px text-xs leading-5 transition-colors active:scale-90",
-                          mineHas ? "border-primary/60 bg-primary/15" : "border-transparent text-muted-foreground hover:bg-secondary")}>
-                        {em}{n > 0 && <span className="ml-0.5 tabular-nums">{n}</span>}
+                          (rx.mine[e.id] || []).includes(em) ? "border-primary/60 bg-primary/15 text-foreground" : "border-border text-muted-foreground")}>
+                        {em}<span className="ml-0.5 tabular-nums">{n}</span>
                       </button>
-                    );
-                  })}
-                </div>
-              )}
-            </motion.div>
-          ))}
+                    ))}
+                    {picking && QUICK_REACTIONS.filter((q) => !present.some(([em]) => em === q)).map((em) => (
+                      <button key={em} onClick={() => { react(e.id, em); setPickerFor(null); }} className="rounded-full px-1 text-sm hover:bg-secondary active:scale-90">{em}</button>
+                    ))}
+                  </div>
+                )}
+                {!e.id.startsWith("local-") && !picking && (
+                  <button onClick={() => setPickerFor(e.id)} aria-label="React"
+                    className="mt-1 inline-flex items-center text-muted-foreground/40 transition-colors hover:text-muted-foreground active:scale-90">
+                    <SmilePlus className="size-3.5" />
+                  </button>
+                )}
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
         {events.length === 0 && <p className="py-1 text-sm text-muted-foreground">No activity yet — say something.</p>}
       </div>

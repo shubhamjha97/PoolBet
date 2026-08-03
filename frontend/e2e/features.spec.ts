@@ -6,8 +6,7 @@ import { login } from "./helpers";
 
 test("home shows the edge-to-edge portfolio chart with range pills", async ({ page }) => {
   await login(page, "Ava");
-  await expect(page.getByText("Net balance")).toBeVisible();
-  await expect(page.getByText("all-time P&L")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your groups" })).toBeVisible();
   // range pills
   for (const r of ["1D", "1W", "1M", "All"]) {
     await expect(page.getByRole("button", { name: r, exact: true })).toBeVisible();

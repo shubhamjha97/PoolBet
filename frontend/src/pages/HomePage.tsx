@@ -21,7 +21,6 @@ const RANGES = [
 import { useAuth } from "@/lib/auth";
 import { enablePush } from "@/lib/push";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -185,41 +184,13 @@ export function HomePage() {
         </div>
       ) : null}
 
-      <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">Your groups</h1>
-        <p className="text-muted-foreground">Pools you play in. Create one or join with a code.</p>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          className="tactile active:scale-95"
-          onClick={() => {
-            haptic("tap");
-            setNewOpen(true);
-          }}
-        >
-          <Plus className="size-4" />
-          New group
-        </Button>
-        <Button
-          variant="outline"
-          className="tactile active:scale-95"
-          onClick={() => {
-            haptic("tap");
-            setJoinOpen(true);
-          }}
-        >
-          Join with code
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Enable notifications"
-          className="ml-auto tactile active:scale-95"
-          onClick={onBell}
-        >
-          <Bell className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button variant="outline" size="sm" className="tactile active:scale-95" onClick={() => { haptic("tap"); setJoinOpen(true); }}>Join</Button>
+          <Button size="sm" className="tactile active:scale-95" onClick={() => { haptic("tap"); setNewOpen(true); }}><Plus className="size-4" /> New</Button>
+          <Button variant="ghost" size="icon" aria-label="Enable notifications" className="tactile size-8 active:scale-95" onClick={onBell}><Bell className="size-4" /></Button>
+        </div>
       </div>
 
       {loading ? (
@@ -235,42 +206,35 @@ export function HomePage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y divide-border/60">
           {groups.map((g) => {
             const me = g.members.find((m) => m.user_id === user?.id);
+            const bal = Number(me?.balance ?? 0);
+            const glpnl = bal - Number(g.starting_credits);
             return (
-              <Card
+              <button
                 key={g.id}
-                role="button"
-                tabIndex={0}
                 onClick={() => openGroup(g.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    openGroup(g.id);
-                  }
-                }}
-                className="tactile flex cursor-pointer items-center justify-between p-4 transition-colors hover:border-primary/40 active:scale-[0.98]"
+                className="flex w-full items-center gap-3 py-3.5 text-left transition-transform active:scale-[0.99]"
               >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-yes to-no text-base font-bold text-black shadow-[0_3px_14px_-3px_hsl(var(--no)/0.5)]">
-                    {g.name.trim().slice(0, 1).toUpperCase() || "•"}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold">{g.name}</div>
-                    <div className="mt-0.5 truncate text-sm text-muted-foreground">
-                      {g.members.length} {g.members.length === 1 ? "member" : "members"} · code{" "}
-                      {g.invite_code}
-                    </div>
+                <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-yes to-no text-base font-bold text-black">
+                  {g.name.trim().slice(0, 1).toUpperCase() || "•"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">{g.name}</div>
+                  <div className="mt-0.5 truncate text-sm text-muted-foreground/70">
+                    {g.members.length} {g.members.length === 1 ? "member" : "members"}
                   </div>
                 </div>
-                {me && (
-                  <div className="ml-3 shrink-0 text-right">
-                    <div className="text-lg font-semibold font-mono tabular-nums">{fmt(me.balance)}</div>
-                    <div className="text-xs text-muted-foreground">balance</div>
-                  </div>
-                )}
-              </Card>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="font-mono text-base font-bold tabular-nums">{fmt(bal)}</div>
+                  {glpnl !== 0 && (
+                    <span className={cn("rounded-md px-1.5 py-0.5 text-xs font-bold tabular-nums", glpnl >= 0 ? "bg-yes text-black" : "bg-no text-white")}>
+                      {glpnl >= 0 ? "+" : ""}{fmt(glpnl)}
+                    </span>
+                  )}
+                </div>
+              </button>
             );
           })}
         </div>

@@ -32,11 +32,11 @@
   /* Dark theme — rich charcoal canvas + solid surfaces (fintech look) */
   .dark {
     --background: 220 14% 2.5%;          /* OLED black (Robinhood-dark) */
-    --foreground: 210 16% 97%;
+    --foreground: 0 0% 100%;             /* pure bright white */
     --card: 220 13% 11%;                 /* #16181C elevated surface */
-    --card-foreground: 210 16% 97%;
+    --card-foreground: 0 0% 100%;
     --popover: 220 14% 9%;
-    --popover-foreground: 210 16% 97%;
+    --popover-foreground: 0 0% 100%;
     --primary: 152 74% 44%;              /* crisp emerald — reserved for gains/actions */
     --primary-foreground: 152 85% 6%;
     --secondary: 222 12% 18%;            /* #2A2E37 neutral grey — secondary controls */

@@ -1,7 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
-import { AmbientNeonBackground } from "@/components/AmbientNeonBackground";
 import { Landing } from "@/pages/Landing";
 import { HomePage } from "@/pages/HomePage";
 import { GroupPage } from "@/pages/GroupPage";
@@ -13,7 +12,7 @@ export default function App() {
 
   return (
     <>
-      <AmbientNeonBackground />
+      {/* ambient background disabled for now */}
       {loading ? (
         <div className="grid min-h-dvh place-items-center text-muted-foreground">Loading…</div>
       ) : !user ? (

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { OrbCanvas } from "@/components/OrbCanvas";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,46 +20,13 @@ const GoogleIcon = () => (
 );
 
 function Hero() {
-  // A Siri-style orb: dark sphere, a hot drifting core, and blurred colour
-  // "blades" swirling at different speeds/directions. No conic gradient (so no
-  // seam line); GPU-only transforms. Reveal once, then loop forever.
+  // A real-time WebGL orb (shader plasma over a dark core), with a soft CSS glow
+  // behind for the halo. Reveal once, then it animates on its own forever.
   return (
     <div className="relative mx-auto grid size-44 place-items-center [animation:pb-reveal_0.65s_cubic-bezier(.2,.9,.25,1.2)_both]" aria-hidden>
       {/* soft outer glow — big + heavily blurred so it fades gradually (no ring banding) */}
       <div className="absolute size-52 rounded-full [background:radial-gradient(circle,hsl(var(--yes)/0.18),hsl(var(--no)/0.12)_46%,transparent_68%)] blur-2xl [animation:pb-breathe_6s_ease-in-out_infinite]" />
-
-      {/* the sphere (no box-shadow halo — it banded; the glow div handles the halo) */}
-      <div className="relative size-40 overflow-hidden rounded-full ring-1 ring-white/15">
-        {/* dark base */}
-        <div className="absolute inset-0 bg-[#050405]" />
-
-        {/* colour corona — bright blobs orbit near the rim so the CENTRE stays dark */}
-        <div className="absolute inset-0 [animation:spin_7s_linear_infinite]">
-          <div className="absolute left-1/2 top-[3%] size-[42%] -translate-x-1/2 rounded-full blur-lg [background:radial-gradient(circle,hsl(var(--yes)),transparent_66%)]" />
-          <div className="absolute bottom-[3%] left-1/2 size-[42%] -translate-x-1/2 rounded-full blur-lg [background:radial-gradient(circle,hsl(var(--no)),transparent_66%)]" />
-        </div>
-        <div className="absolute inset-0 [animation:spin_9s_linear_infinite_reverse]">
-          <div className="absolute left-[2%] top-1/2 size-[38%] -translate-y-1/2 rounded-full blur-lg opacity-90 [background:radial-gradient(circle,#6ee7b7,transparent_66%)]" />
-          <div className="absolute right-[4%] top-[26%] size-[34%] rounded-full blur-lg opacity-80 [background:radial-gradient(circle,hsl(var(--no)),transparent_66%)]" />
-        </div>
-
-        {/* keep the very centre dark (drifts subtly for life) */}
-        <div className="absolute inset-0 [animation:pb-drift_7s_ease-in-out_infinite]">
-          <div className="absolute left-1/2 top-1/2 size-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-lg [background:radial-gradient(circle,#050405_38%,transparent_72%)]" />
-        </div>
-
-        {/* thin bright blades sweeping across (Siri detail) */}
-        <div className="absolute inset-0 [animation:spin_6s_linear_infinite]">
-          <div className="absolute left-1/2 top-1/2 h-[11%] w-[130%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-md opacity-70 [background:radial-gradient(ellipse,rgba(190,255,225,0.95),hsl(var(--yes)/0.5)_40%,transparent_72%)]" />
-        </div>
-        <div className="absolute inset-0 [animation:spin_8s_linear_infinite_reverse]">
-          <div className="absolute left-1/2 top-1/2 h-[9%] w-[124%] -translate-x-1/2 -translate-y-1/2 rotate-[68deg] rounded-full blur-md opacity-60 [background:radial-gradient(ellipse,rgba(255,190,230,0.95),hsl(var(--no)/0.5)_40%,transparent_72%)]" />
-        </div>
-
-        {/* glassy top-left sheen + rim vignette for sphere depth */}
-        <div className="absolute inset-0 [background:radial-gradient(circle_at_34%_28%,rgba(255,255,255,0.18),transparent_44%)]" />
-        <div className="absolute inset-0 rounded-full shadow-[inset_0_-14px_30px_-14px_rgba(0,0,0,0.7),inset_0_2px_6px_rgba(255,255,255,0.2)]" />
-      </div>
+      <OrbCanvas size={176} className="relative" />
     </div>
   );
 }

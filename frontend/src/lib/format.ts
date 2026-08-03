@@ -46,13 +46,14 @@ export function oddsSeriesMulti(bets: Bet[], outcomes: string[]) {
   const points: Record<string, { t: number; v: number }[]> = {};
   for (const o of outcomes) { pools[o] = 0; points[o] = []; }
   let total = 0;
-  for (const b of sorted) {
-    if (!b.outcome || !(b.outcome in pools)) continue;
+  sorted.forEach((b, i) => {
+    if (!b.outcome || !(b.outcome in pools)) return;
     pools[b.outcome] += Number(b.amount);
     total += Number(b.amount);
-    const t = Date.parse(b.created_at);
+    // +i keeps each bet a distinct x even when timestamps share the same second.
+    const t = Date.parse(b.created_at) + i;
     for (const o of outcomes) points[o].push({ t, v: total ? Math.round((pools[o] / total) * 100) : 0 });
-  }
+  });
   return outcomes.map((o) => ({ name: o, points: points[o] }));
 }
 

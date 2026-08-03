@@ -137,7 +137,7 @@ export function HomePage() {
           const pct = portfolio.start ? (shownPnl / portfolio.start) * 100 : 0;
           return (
             <section>
-              <div className="font-mono text-5xl font-extrabold tracking-tight tabular-nums">{fmt(shownV)}</div>
+              <div className="font-mono text-[2.8rem] font-extrabold leading-none tracking-tight tabular-nums">{fmt(shownV)}</div>
               <div className="mt-1.5 text-sm font-mono font-semibold tabular-nums">
                 <span className={shownPnl >= 0 ? "text-yes" : "text-no"}>
                   {shownPnl >= 0 ? "+" : ""}{fmt(shownPnl)} ({shownPnl >= 0 ? "+" : ""}{pct.toFixed(2)}%)
@@ -206,7 +206,7 @@ export function HomePage() {
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-border/60">
+        <div className="divide-y divide-white/[0.045]">
           {groups.map((g) => {
             const me = g.members.find((m) => m.user_id === user?.id);
             const bal = Number(me?.balance ?? 0);
@@ -215,21 +215,21 @@ export function HomePage() {
               <button
                 key={g.id}
                 onClick={() => openGroup(g.id)}
-                className="flex w-full items-center gap-3 py-3.5 text-left transition-transform active:scale-[0.99]"
+                className="flex w-full items-center gap-3 py-5 text-left transition-transform active:scale-[0.99]"
               >
-                <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-yes to-no text-base font-bold text-black">
+                <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-yes to-no text-sm font-bold text-black">
                   {g.name.trim().slice(0, 1).toUpperCase() || "•"}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold">{g.name}</div>
-                  <div className="mt-0.5 truncate text-sm text-muted-foreground/70">
+                  <div className="truncate text-[15px] font-semibold">{g.name}</div>
+                  <div className="mt-0.5 truncate text-[13px] text-muted-foreground/60">
                     {g.members.length} {g.members.length === 1 ? "member" : "members"}
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <div className="font-mono text-base font-bold tabular-nums">{fmt(bal)}</div>
+                  <div className="font-mono text-[15px] font-bold tabular-nums">{fmt(bal)}</div>
                   {glpnl !== 0 && (
-                    <span className={cn("rounded-md px-1.5 py-0.5 text-xs font-bold tabular-nums", glpnl >= 0 ? "bg-yes text-black" : "bg-no text-white")}>
+                    <span className={cn("rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums", glpnl >= 0 ? "bg-yes text-black" : "bg-no text-white")}>
                       {glpnl >= 0 ? "+" : ""}{fmt(glpnl)}
                     </span>
                   )}

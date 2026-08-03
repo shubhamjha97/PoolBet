@@ -135,17 +135,19 @@ export function HomePage() {
           const shownV = scrubIndex != null && rangePoints[scrubIndex] ? rangePoints[scrubIndex].v : portfolio.balance;
           const shownPnl = shownV - portfolio.start;
           const scrubbed = scrubIndex != null ? rangePoints[scrubIndex] : null;
+          const pct = portfolio.start ? (shownPnl / portfolio.start) * 100 : 0;
           return (
             <section>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Net balance</div>
-              <div className="mt-1 font-mono text-4xl font-bold tabular-nums">{fmt(shownV)}</div>
-              <div className="mt-1 text-sm">
+              <div className="font-mono text-5xl font-extrabold tracking-tight tabular-nums">{fmt(shownV)}</div>
+              <div className="mt-1.5 text-sm font-mono font-semibold tabular-nums">
                 <span className={shownPnl >= 0 ? "text-yes" : "text-no"}>
-                  <span className="font-mono font-semibold tabular-nums">{shownPnl >= 0 ? "+" : ""}{fmt(shownPnl)}</span>
-                </span>{" "}
-                <span className="text-muted-foreground">
-                  {scrubbed ? new Date(scrubbed.t).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "all-time P&L"}
+                  {shownPnl >= 0 ? "+" : ""}{fmt(shownPnl)} ({shownPnl >= 0 ? "+" : ""}{pct.toFixed(2)}%)
                 </span>
+                {scrubbed && (
+                  <span className="ml-2 font-sans font-normal text-muted-foreground/70">
+                    {new Date(scrubbed.t).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </span>
+                )}
               </div>
 
               {/* edge-to-edge, breaking the page gutter */}
@@ -171,9 +173,8 @@ export function HomePage() {
           );
         })()
       ) : groups.length > 0 ? (
-        <div className="rounded-2xl border bg-card p-5">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Net balance</div>
-          <div className="mt-1 font-mono text-4xl font-bold tabular-nums">{fmt(totalBalance)}</div>
+        <div className="rounded-2xl bg-card p-5">
+          <div className="font-mono text-4xl font-extrabold tabular-nums">{fmt(totalBalance)}</div>
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
             <span><span className="font-mono font-semibold tabular-nums">{groups.length}</span> <span className="text-muted-foreground">{groups.length === 1 ? "group" : "groups"}</span></span>
             <span className={pnl >= 0 ? "text-yes" : "text-no"}>

@@ -26,7 +26,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const el = document.documentElement;
     el.classList.toggle("dark", theme === "dark");
     el.style.colorScheme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0D0F12" : "#ffffff");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#060708" : "#ffffff");
   }, [theme]);
 
   const toggle = () =>

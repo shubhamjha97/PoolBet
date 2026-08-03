@@ -19,24 +19,16 @@ export function AppShell() {
 
   return (
     <div className="relative z-10 min-h-dvh">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 pt-safe px-safe">
-        <div className="mx-auto flex h-14 max-w-[820px] items-center justify-between px-4">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-[17px] font-semibold tracking-tight"
-            onClick={() => haptic("select")}
-          >
-            <span className="h-5 w-5 rounded-md bg-gradient-to-br from-yes to-no shadow-glow-yes" />
-            PoolBet
-          </Link>
-
-          {user && (
+      {/* no top bar — just a floating account avatar in the top-right corner */}
+      {user && (
+        <div className="fixed right-4 top-0 z-40 pt-safe">
+          <div className="pt-3">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
                 <button
                   aria-label="Account"
                   onClick={() => haptic("select")}
-                  className="grid size-9 place-items-center rounded-full bg-gradient-to-br from-yes to-no text-sm font-bold text-black shadow-[0_2px_10px_-2px_hsl(var(--no)/0.5)] transition-transform active:scale-95"
+                  className="grid size-9 place-items-center rounded-full bg-gradient-to-br from-yes to-no text-sm font-bold text-black shadow-[0_2px_12px_-2px_hsl(var(--no)/0.55)] ring-4 ring-background/70 transition-transform active:scale-95"
                 >
                   {initial}
                 </button>
@@ -65,12 +57,14 @@ export function AppShell() {
                 </div>
               </SheetContent>
             </Sheet>
-          )}
+          </div>
         </div>
-      </header>
+      )}
 
-      <main className="relative z-10 mx-auto w-full max-w-[820px] px-4 pb-28 pt-5">
-        <Outlet />
+      <main className="relative z-10 mx-auto w-full max-w-[820px] px-4 pb-28 pt-safe">
+        <div className="pt-3">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

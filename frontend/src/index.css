@@ -31,7 +31,7 @@
 
   /* Dark theme — rich charcoal canvas + solid surfaces (fintech look) */
   .dark {
-    --background: 220 15% 6%;            /* #0D0F12 charcoal (not pure black) */
+    --background: 220 14% 2.5%;          /* OLED black (Robinhood-dark) */
     --foreground: 210 16% 97%;
     --card: 220 13% 11%;                 /* #16181C elevated surface */
     --card-foreground: 210 16% 97%;

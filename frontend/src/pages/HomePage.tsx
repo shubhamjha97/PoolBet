@@ -1,8 +1,362 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Bell, Loader2, Plus, Users } from "lucide-react";
+import { toast } from "sonner";
+
+import { api, ApiError } from "@/lib/api";
+import type { Group } from "@/lib/types";
+import { fmt } from "@/lib/format";
+import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/lib/auth";
+import { enablePush } from "@/lib/push";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const GROUPS_KEY = "pb_groups";
+
+function loadGroupIds(): string[] {
+  try {
+    const raw = localStorage.getItem(GROUPS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function rememberGroup(id: string): void {
+  try {
+    const ids = loadGroupIds();
+    if (ids.includes(id)) return;
+    localStorage.setItem(GROUPS_KEY, JSON.stringify([...ids, id]));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function HomePage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newOpen, setNewOpen] = useState(false);
+  const [joinOpen, setJoinOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const ids = loadGroupIds();
+      const results = await Promise.all(
+        ids.map((id) => api<Group>("GET", `/groups/${id}`).catch(() => null)),
+      );
+      if (cancelled) return;
+      setGroups(results.filter((g): g is Group => g !== null));
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function onBell() {
+    haptic("tap");
+    try {
+      await enablePush();
+      haptic("success");
+      toast.success("Notifications enabled");
+    } catch (e) {
+      haptic("warn");
+      toast.error(e instanceof Error ? e.message : "Could not enable notifications");
+    }
+  }
+
+  function openGroup(id: string) {
+    haptic("select");
+    navigate(`/group/${id}`);
+  }
+
+  function addGroup(g: Group) {
+    rememberGroup(g.id);
+    setGroups((prev) => (prev.some((x) => x.id === g.id) ? prev : [...prev, g]));
+  }
+
   return (
-    <div className="animate-fade-up space-y-3">
-      <h1 className="text-2xl font-semibold tracking-tight">Your groups</h1>
-      <p className="text-muted-foreground">Rebuilding this screen in the new stack…</p>
+    <div className="animate-fade-up space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Your groups</h1>
+        <p className="text-muted-foreground">Pools you play in. Create one or join with a code.</p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          className="tactile active:scale-95"
+          onClick={() => {
+            haptic("tap");
+            setNewOpen(true);
+          }}
+        >
+          <Plus className="size-4" />
+          New group
+        </Button>
+        <Button
+          variant="outline"
+          className="tactile active:scale-95"
+          onClick={() => {
+            haptic("tap");
+            setJoinOpen(true);
+          }}
+        >
+          Join with code
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Enable notifications"
+          className="ml-auto tactile active:scale-95"
+          onClick={onBell}
+        >
+          <Bell className="size-4" />
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" />
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="rounded-xl border border-dashed py-14 text-center">
+          <Users className="mx-auto size-8 text-muted-foreground" />
+          <p className="mt-3 font-medium">No groups yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Start a new pool or join one with an invite code.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {groups.map((g) => {
+            const me = g.members.find((m) => m.user_id === user?.id);
+            return (
+              <Card
+                key={g.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openGroup(g.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openGroup(g.id);
+                  }
+                }}
+                className="tactile flex cursor-pointer items-center justify-between p-4 active:scale-[0.98]"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-semibold">{g.name}</div>
+                  <div className="mt-0.5 truncate text-sm text-muted-foreground">
+                    {g.members.length} {g.members.length === 1 ? "member" : "members"} · code{" "}
+                    {g.invite_code}
+                  </div>
+                </div>
+                {me && (
+                  <div className="ml-3 shrink-0 text-right">
+                    <div className="text-lg font-semibold tabular-nums">{fmt(me.balance)}</div>
+                    <div className="text-xs text-muted-foreground">balance</div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <NewGroupDialog
+        open={newOpen}
+        onOpenChange={setNewOpen}
+        onCreated={(g) => {
+          addGroup(g);
+          openGroup(g.id);
+        }}
+      />
+      <JoinGroupDialog
+        open={joinOpen}
+        onOpenChange={setJoinOpen}
+        onJoined={(g) => {
+          addGroup(g);
+          openGroup(g.id);
+        }}
+      />
     </div>
+  );
+}
+
+function NewGroupDialog({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreated: (g: Group) => void;
+}) {
+  const [name, setName] = useState("");
+  const [credits, setCredits] = useState("1000");
+  const [window, setWindow] = useState("12");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!name.trim()) {
+      toast.error("Give your group a name");
+      return;
+    }
+    setBusy(true);
+    haptic("tap");
+    try {
+      const g = await api<Group>("POST", "/groups", {
+        name: name.trim(),
+        starting_credits: Number(credits) || 0,
+        dispute_window_hours: Number(window) || 0,
+      });
+      haptic("success");
+      onOpenChange(false);
+      setName("");
+      onCreated(g);
+    } catch (e) {
+      haptic("warn");
+      toast.error(e instanceof ApiError ? e.message : "Could not create group");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="rounded-xl">
+        <DialogHeader>
+          <DialogTitle>New group</DialogTitle>
+          <DialogDescription>Set up a pool and invite your friends.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="ng-name">Name</Label>
+            <Input
+              id="ng-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Weekend crew"
+              autoFocus
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="ng-credits">Starting credits</Label>
+              <Input
+                id="ng-credits"
+                type="number"
+                inputMode="numeric"
+                value={credits}
+                onChange={(e) => setCredits(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ng-window">Dispute window (hrs)</Label>
+              <Input
+                id="ng-window"
+                type="number"
+                inputMode="numeric"
+                value={window}
+                onChange={(e) => setWindow(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            className="tactile active:scale-95"
+            disabled={busy}
+            onClick={submit}
+          >
+            {busy && <Loader2 className="size-4 animate-spin" />}
+            Create group
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function JoinGroupDialog({
+  open,
+  onOpenChange,
+  onJoined,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onJoined: (g: Group) => void;
+}) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    const invite_code = code.trim().toUpperCase();
+    if (!invite_code) {
+      toast.error("Enter an invite code");
+      return;
+    }
+    setBusy(true);
+    haptic("tap");
+    try {
+      const g = await api<Group>("POST", "/groups/join", { invite_code });
+      haptic("success");
+      onOpenChange(false);
+      setCode("");
+      onJoined(g);
+    } catch (e) {
+      haptic("warn");
+      toast.error(e instanceof ApiError ? e.message : "Could not join group");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="rounded-xl">
+        <DialogHeader>
+          <DialogTitle>Join with code</DialogTitle>
+          <DialogDescription>Enter the invite code someone shared with you.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          <Label htmlFor="jg-code">Invite code</Label>
+          <Input
+            id="jg-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="ABC123"
+            autoFocus
+            className="uppercase tracking-widest"
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            className="tactile active:scale-95"
+            disabled={busy}
+            onClick={submit}
+          >
+            {busy && <Loader2 className="size-4 animate-spin" />}
+            Join group
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

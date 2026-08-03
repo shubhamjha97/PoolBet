@@ -147,7 +147,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
         <div className="border-t px-4 pb-4 pt-3 animate-fade-up">
           <p className="mb-3 text-xs text-muted-foreground">by {market.proposer_name} · pot {fmt(total)}</p>
 
-          {probPts.length >= 2 && (
+          {!isMulti && probPts.length >= 2 && (
             <div className="mb-3 rounded-lg bg-secondary p-3">
               <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Odds over time</div>
               <ProbabilityChart points={probPts} />

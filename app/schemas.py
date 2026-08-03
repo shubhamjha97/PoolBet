@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .sanitize import CleanStr
 
@@ -57,16 +57,42 @@ class MarketCreate(BaseModel):
     question: CleanStr = Field(min_length=3, max_length=280)
     closes_at: datetime
     rules: CleanStr | None = Field(default=None, max_length=2000)
+    # None/omitted -> a binary YES/NO market. 2–8 labels -> a multiple-choice market.
+    outcomes: list[CleanStr] | None = Field(default=None)
+
+    @field_validator("outcomes")
+    @classmethod
+    def _check_outcomes(cls, v):
+        if v is None:
+            return None
+        labels = [s.strip() for s in v if s and s.strip()]
+        if len(labels) < 2:
+            raise ValueError("a multiple-choice market needs at least 2 outcomes")
+        if len(labels) > 8:
+            raise ValueError("at most 8 outcomes")
+        if len(set(labels)) != len(labels):
+            raise ValueError("outcomes must be distinct")
+        if any(len(s) > 60 for s in labels):
+            raise ValueError("each outcome is at most 60 characters")
+        return labels
 
 
 class BetOut(BaseModel):
     id: str
-    side: str
+    side: str | None          # YES/NO for binary markets
+    outcome: str | None        # chosen label for multiple-choice markets
     amount: Decimal
     payout: Decimal | None
     member_name: str          # nickname when anonymous, else the real user name
     is_anonymous: bool
     created_at: datetime
+
+
+class OutcomePoolOut(BaseModel):
+    label: str
+    pool: Decimal
+    pct: Decimal | None   # share of the total pot (crowd-implied probability)
+    count: int
 
 
 class MarketOut(BaseModel):
@@ -83,6 +109,8 @@ class MarketOut(BaseModel):
     no_pool: Decimal
     yes_prob: Decimal | None
     no_prob: Decimal | None
+    outcomes: list[str] | None            # None for binary markets
+    outcome_pools: list[OutcomePoolOut]   # per-label pools for multiple-choice (empty for binary)
     proposed_outcome: str | None
     proposed_fraction: Decimal | None
     outcome: str | None
@@ -92,13 +120,15 @@ class MarketOut(BaseModel):
 
 # ---------- bets / resolution ----------
 class BetCreate(BaseModel):
-    side: str = Field(pattern="^(YES|NO)$")
+    side: str | None = Field(default=None, pattern="^(YES|NO)$")   # binary markets
+    outcome: CleanStr | None = Field(default=None, max_length=60)  # multiple-choice markets
     amount: Decimal = Field(gt=0, le=Decimal("1000000000"))  # cap guards against overflow/abuse
     anonymous: bool = False
 
 
 class ResolveIn(BaseModel):
-    outcome: str = Field(pattern="^(YES|NO|VOID|SCALAR)$")
+    # Binary: YES/NO/VOID/SCALAR. Multiple-choice: VOID or one of the market's labels.
+    outcome: str = Field(min_length=1, max_length=60)
     # Required when outcome == SCALAR: the YES side's share of the pot, 0–100.
     yes_percent: float | None = Field(default=None, ge=0, le=100)
 

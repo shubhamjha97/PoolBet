@@ -9,7 +9,7 @@ start() {
   sleep 2
   cloudflared tunnel --url http://localhost:8000 >"$LOG" 2>&1 &
   for _ in $(seq 1 20); do
-    u=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOG" | head -1)
+    u=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' "$LOG" | grep -v '://api\.' | head -1)
     if [ -n "$u" ]; then echo "$u" >"$URLFILE"; echo "[keepalive] up: $u"; return; fi
     sleep 2
   done

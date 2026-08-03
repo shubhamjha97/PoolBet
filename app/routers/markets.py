@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import current_user, require_membership
-from ..engine import StakeIn, compute_odds, settle
+from ..engine import StakeIn, compute_odds, outcome_pools, settle, settle_multi
 from ..models import (
     Bet,
     Dispute,
@@ -40,6 +40,7 @@ from ..schemas import (
     MarketOut,
     MarketPreview,
     MessageOut,
+    OutcomePoolOut,
     ResolveIn,
     VoteIn,
 )
@@ -70,7 +71,13 @@ def _stakes(market: Market) -> list[StakeIn]:
     return [StakeIn(bet_id=b.id, side=b.side, amount=b.amount) for b in market.bets]
 
 
+def _multi_stakes(market: Market) -> list[StakeIn]:
+    """Stakes keyed by outcome label (for N-way settlement/odds)."""
+    return [StakeIn(bet_id=b.id, side=b.outcome or "", amount=b.amount) for b in market.bets]
+
+
 def _serialize_market(db: Session, market: Market) -> MarketOut:
+    is_multi = bool(market.outcomes)
     odds = compute_odds(_stakes(market))
     proposer = db.get(Membership, market.proposer_id)
     proposer_user = db.get(User, proposer.user_id) if proposer else None
@@ -86,6 +93,7 @@ def _serialize_market(db: Session, market: Market) -> MarketOut:
         BetOut(
             id=b.id,
             side=b.side,
+            outcome=b.outcome,
             amount=b.amount,
             payout=b.payout,
             # Anonymous bets surface their stable nickname, never the real name.
@@ -95,6 +103,24 @@ def _serialize_market(db: Session, market: Market) -> MarketOut:
         )
         for b in market.bets
     ]
+
+    # Per-label pools for multiple-choice markets (crowd-implied odds).
+    outcome_pool_out: list[OutcomePoolOut] = []
+    if is_multi:
+        pools = outcome_pools(_multi_stakes(market))
+        total = sum(pools.values()) or Decimal("0")
+        counts: dict[str, int] = {}
+        for b in market.bets:
+            counts[b.outcome or ""] = counts.get(b.outcome or "", 0) + 1
+        for label in (market.outcomes or []):
+            pool = pools.get(label, Decimal("0"))
+            outcome_pool_out.append(OutcomePoolOut(
+                label=label,
+                pool=pool,
+                pct=(pool / total).quantize(Decimal("0.0001")) if total > 0 else None,
+                count=counts.get(label, 0),
+            ))
+
     return MarketOut(
         id=market.id,
         group_id=market.group_id,
@@ -109,6 +135,8 @@ def _serialize_market(db: Session, market: Market) -> MarketOut:
         no_pool=odds.no_pool,
         yes_prob=odds.yes_prob,
         no_prob=odds.no_prob,
+        outcomes=market.outcomes,
+        outcome_pools=outcome_pool_out,
         proposed_outcome=market.proposed_outcome,
         proposed_fraction=market.proposed_fraction,
         outcome=market.outcome,
@@ -140,6 +168,7 @@ def create_market(
         rules=body.rules,
         closes_at=body.closes_at,
         status=MarketStatus.OPEN,
+        outcomes=body.outcomes,  # None -> binary YES/NO; list -> multiple-choice
     )
     db.add(market)
     db.flush()
@@ -237,6 +266,16 @@ def place_bet(
     if body.amount > member.balance:
         raise HTTPException(status_code=422, detail="insufficient balance")
 
+    # What is this bet on? Multiple-choice markets use `outcome`; binary use `side`.
+    if market.outcomes:
+        if not body.outcome or body.outcome not in market.outcomes:
+            raise HTTPException(status_code=422, detail="pick one of the market's outcomes")
+        bet_side, bet_outcome, pick = None, body.outcome, body.outcome
+    else:
+        if body.side not in ("YES", "NO"):
+            raise HTTPException(status_code=422, detail="side must be YES or NO")
+        bet_side, bet_outcome, pick = Side(body.side).value, None, Side(body.side).value
+
     nickname = None
     if body.anonymous:
         # Reuse this membership's existing nickname in this market so an anonymous
@@ -255,7 +294,8 @@ def place_bet(
         Bet(
             market_id=market.id,
             membership_id=member.id,
-            side=Side(body.side).value,
+            side=bet_side,
+            outcome=bet_outcome,
             amount=body.amount,
             anonymous=body.anonymous,
             nickname=nickname,
@@ -264,7 +304,7 @@ def place_bet(
     record_txn(db, member, -body.amount, TxnKind.BET, market_id=market.id)
     record_event(
         db, "bet_placed", actor_user_id=user.id, group_id=market.group_id,
-        market_id=market.id, side=Side(body.side).value,
+        market_id=market.id, side=pick,
         amount=str(body.amount), anonymous=body.anonymous,
         nickname_or_name=(nickname if body.anonymous else user.name),
         actor_name=user.name if not body.anonymous else None,
@@ -320,13 +360,22 @@ def propose_resolution(
     if _aware(market.closes_at) > utcnow():
         raise HTTPException(status_code=409, detail="market has not closed yet")
 
-    market.proposed_outcome = Outcome(body.outcome).value
-    if body.outcome == "SCALAR":
-        if body.yes_percent is None:
-            raise HTTPException(status_code=422, detail="SCALAR outcome requires yes_percent")
-        market.proposed_fraction = (Decimal(str(body.yes_percent)) / Decimal("100")).quantize(Decimal("0.0001"))
-    else:
+    if market.outcomes:
+        # Multiple-choice: the winner is VOID or one of the market's labels.
+        if body.outcome != "VOID" and body.outcome not in market.outcomes:
+            raise HTTPException(status_code=422, detail="winning outcome must be one of the market's labels (or VOID)")
+        market.proposed_outcome = body.outcome
         market.proposed_fraction = None
+    else:
+        if body.outcome not in ("YES", "NO", "SCALAR", "VOID"):
+            raise HTTPException(status_code=422, detail="outcome must be YES, NO, SCALAR, or VOID")
+        market.proposed_outcome = Outcome(body.outcome).value
+        if body.outcome == "SCALAR":
+            if body.yes_percent is None:
+                raise HTTPException(status_code=422, detail="SCALAR outcome requires yes_percent")
+            market.proposed_fraction = (Decimal(str(body.yes_percent)) / Decimal("100")).quantize(Decimal("0.0001"))
+        else:
+            market.proposed_fraction = None
     market.resolution_proposed_at = utcnow()
     market.status = MarketStatus.RESOLVING
     record_event(
@@ -402,13 +451,25 @@ def _apply_settlement(db: Session, market: Market, outcome: str, fraction: Decim
     # The house takes a tiny admin-adjustable cut on top of the group's own rake.
     house_rake = Decimal(get_setting(db, "house_rake", "0") or "0")
     effective_rake = group.rake + house_rake
-    payouts = settle(_stakes(market), outcome, rake=effective_rake, yes_fraction=fraction)
 
-    # Record the house's cut so it can be summed for earnings. Rake is only taken
-    # on a genuinely two-sided, non-VOID settlement (matches the engine's guards).
-    odds = compute_odds(_stakes(market))
-    if outcome != "VOID" and odds.yes_pool > 0 and odds.no_pool > 0 and house_rake > 0:
-        house_take = (odds.total * house_rake).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+    if market.outcomes:
+        # N-way: the winning label's backers split the pot; VOID (no such label) refunds.
+        stakes = _multi_stakes(market)
+        payouts = settle_multi(stakes, outcome, rake=effective_rake)
+        pools = outcome_pools(stakes)
+        total = sum(pools.values(), Decimal("0"))
+        win_pool = pools.get(outcome, Decimal("0"))
+        rake_applies = outcome != "VOID" and Decimal("0") < win_pool < total and house_rake > 0
+    else:
+        stakes = _stakes(market)
+        payouts = settle(stakes, outcome, rake=effective_rake, yes_fraction=fraction)
+        odds = compute_odds(stakes)
+        total = odds.total
+        rake_applies = outcome != "VOID" and odds.yes_pool > 0 and odds.no_pool > 0 and house_rake > 0
+
+    # Record the house's cut so it can be summed for earnings (only when actually taken).
+    if rake_applies:
+        house_take = (total * house_rake).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
         if house_take > 0:
             record_event(
                 db, "house_rake", group_id=market.group_id, market_id=market.id,

@@ -132,7 +132,7 @@ def rollback_to(db, snapshot_id: str) -> dict:
 # Telemetry/noise events are logged but must NOT create rollback snapshots — they
 # fire constantly (session pings, app opens) and would flood out the meaningful
 # snapshots (bets, settlements). They change no domain state anyway.
-_NO_SNAPSHOT_EVENTS = {"app_open", "session_ping", "user_login", "comment"}
+_NO_SNAPSHOT_EVENTS = {"app_open", "session_ping", "user_login", "comment", "house_rake"}
 
 
 # ---------------------------------------------------------------------------

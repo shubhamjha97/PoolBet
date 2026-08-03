@@ -11,8 +11,11 @@ from ..deps import current_user, require_membership
 from ..models import (
     AccessRequest,
     AccessStatus,
+    Bet,
     Event,
     Group,
+    Market,
+    MarketStatus,
     Membership,
     Transaction,
     TxnKind,
@@ -32,8 +35,12 @@ from ..schemas import (
     MessageOut,
     PnlPoint,
     PnlSeries,
+    SettlementNet,
+    SettlementOut,
+    SettlementTransfer,
     TimelineItem,
 )
+from ..settlement import min_transfers
 
 router = APIRouter(prefix="/groups", tags=["groups"])
 
@@ -213,6 +220,74 @@ def group_pnl(
         ]
         out.append(PnlSeries(user_id=u.id, name=u.name, series=series))
     return out
+
+
+# ---------- settlement (who-pays-who) ----------
+@router.get("/{group_id}/settlement", response_model=SettlementOut)
+def group_settlement(
+    group_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    """Minimal set of real-world payments that settles the group. Members only.
+
+    A member's REALIZED net = current balance MINUS total credits granted
+    (GRANT ledger deltas) PLUS stake still locked in unresolved markets. The
+    stake add-back matters because placing a bet debits the balance immediately;
+    until that market RESOLVES the stake is escrowed in the pot, not a loss.
+    With it, nets conserve to ~0 (minus any house rake already taken), so the
+    transfers are true realized debts rather than counting open bets as losses.
+    """
+    group = db.get(Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="group not found")
+    require_membership(db, group_id, user)
+
+    rows = db.execute(
+        select(Membership, User)
+        .join(User, User.id == Membership.user_id)
+        .where(Membership.group_id == group_id)
+    ).all()
+
+    # Stake tied up in markets that haven't paid out yet (add back to realized net).
+    open_stake_rows = db.execute(
+        select(Bet.membership_id, func.coalesce(func.sum(Bet.amount), 0))
+        .join(Market, Market.id == Bet.market_id)
+        .join(Membership, Membership.id == Bet.membership_id)
+        .where(
+            Membership.group_id == group_id,
+            Market.status != MarketStatus.RESOLVED,
+        )
+        .group_by(Bet.membership_id)
+    ).all()
+    open_stake = {mid: amt for mid, amt in open_stake_rows}
+
+    name_by_user: dict[str, str] = {}
+    nets: dict[str, float] = {}
+    net_out: list[SettlementNet] = []
+    for m, u in rows:
+        granted = db.scalar(
+            select(func.coalesce(func.sum(Transaction.delta), 0)).where(
+                Transaction.membership_id == m.id,
+                Transaction.kind == TxnKind.GRANT.value,
+            )
+        ) or 0
+        net_val = float(m.balance) - float(granted) + float(open_stake.get(m.id, 0))
+        nets[u.id] = net_val
+        name_by_user[u.id] = u.name
+        net_out.append(SettlementNet(user_id=u.id, name=u.name, net=round(net_val, 2)))
+
+    transfers = [
+        SettlementTransfer(
+            from_user_id=frm,
+            from_name=name_by_user.get(frm, "?"),
+            to_user_id=to,
+            to_name=name_by_user.get(to, "?"),
+            amount=amount,
+        )
+        for frm, to, amount in min_transfers(nets)
+    ]
+    return SettlementOut(net=net_out, transfers=transfers)
 
 
 # ---------- access requests (deep-link join flow) ----------

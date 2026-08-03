@@ -29,4 +29,17 @@ test.describe("admin", () => {
     // success toast, and the dialog closes
     await expect(page.getByText("Rolled back", { exact: true })).toBeVisible(); // the toast (not "State rolled back" log lines)
   });
+
+  test("metrics tiles render and the house rake saves", async ({ page }) => {
+    await login(page, "Ava");
+    await page.goto("/#/admin");
+
+    await expect(page.getByText("Metrics", { exact: true })).toBeVisible();
+    await expect(page.getByText("Users", { exact: true })).toBeVisible();
+    await expect(page.getByText("Total volume", { exact: true })).toBeVisible();
+
+    await expect(page.getByText("House rake", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("House rake saved")).toBeVisible();
+  });
 });

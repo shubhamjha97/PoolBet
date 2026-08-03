@@ -228,3 +228,33 @@ class RollbackOut(BaseModel):
 
 class AdminMeOut(BaseModel):
     is_admin: bool
+
+
+# ---------- admin / settings ----------
+class HouseRakeOut(BaseModel):
+    house_rake: float
+
+
+class HouseRakeIn(BaseModel):
+    # Tiny house cut applied on top of the group rake at settlement. Capped at 5%.
+    house_rake: float = Field(ge=0, le=0.05)
+
+
+# ---------- settlement (who-pays-who) ----------
+class SettlementNet(BaseModel):
+    user_id: str
+    name: str
+    net: float
+
+
+class SettlementTransfer(BaseModel):
+    from_user_id: str
+    from_name: str
+    to_user_id: str
+    to_name: str
+    amount: float
+
+
+class SettlementOut(BaseModel):
+    net: list[SettlementNet]
+    transfers: list[SettlementTransfer]

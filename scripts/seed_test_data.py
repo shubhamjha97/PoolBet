@@ -56,8 +56,11 @@ def resolve(mid, owner, outcome, pct=None):
     body = {"outcome": outcome}
     if pct is not None:
         body["yes_percent"] = pct
-    c.post(f"/markets/{mid}/resolve", json=body, headers=h(owner))
-    c.post(f"/markets/{mid}/settle", headers=h(owner))  # 0h window → proposer settles now
+    r1 = c.post(f"/markets/{mid}/resolve", json=body, headers=h(owner))
+    r2 = c.post(f"/markets/{mid}/settle", headers=h(owner))  # 0h window → proposer settles now
+    if r1.status_code >= 300 or r2.status_code >= 300:
+        raise SystemExit(f"seed resolve failed: resolve={r1.status_code} {r1.text} "
+                         f"settle={r2.status_code} {r2.text}")
 
 
 def main():
@@ -73,12 +76,12 @@ def main():
     m = make_market(g1["id"], "Ava", "Will Ava finish the marathon under 4h?", 72)
     bet(m, "Ben", "YES", 90); bet(m, "Cy", "NO", 130); bet(m, "Gus", "YES", 50)
     # resolved YES
-    mr = make_market(g1["id"], "Ava", "Did the Lakers win last night?", 0.001)
+    mr = make_market(g1["id"], "Ava", "Did the Lakers win last night?", 0.0002)
     bet(mr, "Ava", "YES", 200); bet(mr, "Ben", "NO", 120); bet(mr, "Hana", "YES", 70)
     # scalar resolved (YES 65%)
-    ms = make_market(g1["id"], "Ava", "Did the Chiefs cover the spread?", 0.001)
+    ms = make_market(g1["id"], "Ava", "Did the Chiefs cover the spread?", 0.0002)
     bet(ms, "Cy", "YES", 100); bet(ms, "Dee", "NO", 100); bet(ms, "Eve", "YES", 60)
-    time.sleep(1.3)
+    time.sleep(2.0)
     resolve(mr, "Ava", "YES")
     resolve(ms, "Ava", "SCALAR", pct=65)
 
@@ -86,9 +89,9 @@ def main():
     g2 = make_group("Ben", "Degens", ["Ben", "Cy", "Eve", "Finn"], dispute_hours=0)
     m = make_market(g2["id"], "Ben", "BTC above 100k by Friday?", 60)
     bet(m, "Ben", "YES", 200); bet(m, "Cy", "NO", 150, anon=True); bet(m, "Eve", "YES", 120); bet(m, "Finn", "NO", 90)
-    mr = make_market(g2["id"], "Ben", "Will Finn ship the feature today?", 0.001)
+    mr = make_market(g2["id"], "Ben", "Will Finn ship the feature today?", 0.0002)
     bet(mr, "Cy", "NO", 110); bet(mr, "Eve", "YES", 80); bet(mr, "Finn", "YES", 140)
-    time.sleep(1.3)
+    time.sleep(2.0)
     resolve(mr, "Ben", "NO")
 
     # ---- Group 3: Office Pool ----

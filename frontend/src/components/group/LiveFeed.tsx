@@ -27,7 +27,11 @@ function describe(e: TimelineEvent): string {
   }
 }
 
-export function LiveFeed({ events, groupId }: { events: TimelineEvent[]; groupId: string }) {
+export function LiveFeed({ events, groupId, onLocalEcho }: {
+  events: TimelineEvent[];
+  groupId: string;
+  onLocalEcho?: (text: string) => void;
+}) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -36,11 +40,12 @@ export function LiveFeed({ events, groupId }: { events: TimelineEvent[]; groupId
     if (!t) return;
     setBusy(true);
     haptic("tap");
+    setText("");
+    onLocalEcho?.(t); // show it instantly; the SSE echo dedupes & replaces it
     try {
       await api("POST", `/groups/${groupId}/comments`, { text: t });
-      setText(""); // it streams back in via SSE
     } catch {
-      /* ignore */
+      /* ignore — the optimistic line stays; a refresh/echo reconciles */
     } finally {
       setBusy(false);
     }

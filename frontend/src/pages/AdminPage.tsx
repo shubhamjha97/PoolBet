@@ -7,12 +7,54 @@ import type { AdminEvent, Snapshot } from "@/lib/types";
 import { fmt, timeAgo } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { MultiLineChart } from "@/components/Charts";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
 type P = Record<string, unknown>;
 const s = (v: unknown) => (v == null ? "" : String(v));
+
+type Metrics = {
+  users: number;
+  groups: number;
+  markets: number;
+  bets: number;
+  app_opens: number;
+  session_seconds: number;
+  active_users_7d: number;
+  total_volume: string;
+  house_earnings: string;
+  events_per_day: { day: string; count: number }[];
+  bets_per_day: { day: string; count: number }[];
+};
+type Settings = { house_rake: number };
+
+// Turn a duration in seconds into a compact human string (e.g. "3d 4h", "2h 5m").
+function humanizeSecs(total: number) {
+  const secs = Math.max(0, Math.round(Number(total) || 0));
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
+  if (h >= 1) return `${h}h ${m}m`;
+  if (m >= 1) return `${m}m`;
+  return `${secs}s`;
+}
+
+function Kpi({ label, value }: { label: string; value: string }) {
+  return (
+    <Card className="p-3">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 font-mono text-xl tabular-nums">{value}</div>
+    </Card>
+  );
+}
+
+function dayPoints(rows: { day: string; count: number }[]) {
+  return rows.map((r) => ({ t: Date.parse(r.day), v: Number(r.count) || 0 }));
+}
 
 function line(e: AdminEvent) {
   const p = (e.payload || {}) as P;
@@ -39,12 +81,31 @@ export function AdminPage() {
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [confirm, setConfirm] = useState<Snapshot | null>(null);
   const [busy, setBusy] = useState(false);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [rake, setRake] = useState(0); // fraction, e.g. 0.01 = 1%
+  const [savingRake, setSavingRake] = useState(false);
 
   const load = useCallback(async () => {
     try { setSnaps(await api<Snapshot[]>("GET", "/admin/snapshots")); } catch { setSnaps([]); }
     try { setEvents(await api<AdminEvent[]>("GET", "/admin/events?limit=100")); } catch { setEvents([]); }
+    try { setMetrics(await api<Metrics>("GET", "/admin/metrics")); } catch { setMetrics(null); }
+    try { setRake((await api<Settings>("GET", "/admin/settings")).house_rake); } catch { /* keep default */ }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  async function saveRake() {
+    setSavingRake(true);
+    try {
+      const next = await api<Settings>("POST", "/admin/settings", { house_rake: rake });
+      setRake(next.house_rake);
+      toast.success("House rake saved");
+      haptic("success");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingRake(false);
+    }
+  }
 
   async function rollback() {
     if (!confirm) return;
@@ -68,6 +129,65 @@ export function AdminPage() {
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> back</Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Admin</h1>
         <p className="text-muted-foreground">The commit log — every action is appended here, and you can roll the whole app back to any snapshot.</p>
+      </div>
+
+      <div>
+        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Metrics</div>
+        {!metrics ? (
+          <p className="text-sm text-muted-foreground">No metrics yet.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Kpi label="Users" value={fmt(metrics.users)} />
+              <Kpi label="Active 7d" value={fmt(metrics.active_users_7d)} />
+              <Kpi label="Bets" value={fmt(metrics.bets)} />
+              <Kpi label="Total volume" value={fmt(metrics.total_volume)} />
+              <Kpi label="App opens" value={fmt(metrics.app_opens)} />
+              <Kpi label="Session time" value={humanizeSecs(metrics.session_seconds)} />
+              <Kpi label="House earnings" value={fmt(metrics.house_earnings)} />
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border bg-card p-3">
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events / day</div>
+                {metrics.events_per_day.length === 0 ? (
+                  <p className="py-6 text-sm text-muted-foreground">No data.</p>
+                ) : (
+                  <MultiLineChart series={[{ name: "Events", points: dayPoints(metrics.events_per_day), highlight: true }]} />
+                )}
+              </div>
+              <div className="rounded-xl border bg-card p-3">
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Bets / day</div>
+                {metrics.bets_per_day.length === 0 ? (
+                  <p className="py-6 text-sm text-muted-foreground">No data.</p>
+                ) : (
+                  <MultiLineChart series={[{ name: "Bets", points: dayPoints(metrics.bets_per_day), highlight: true }]} />
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div>
+        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">House rake</div>
+        <div className="rounded-xl border bg-card p-4">
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm text-muted-foreground">Rake</span>
+            <span className="font-mono text-xl tabular-nums">{(rake * 100).toFixed(1)}%</span>
+          </div>
+          <Slider
+            className="mt-3"
+            min={0}
+            max={5}
+            step={0.1}
+            value={[rake * 100]}
+            onValueChange={(v) => setRake((v[0] ?? 0) / 100)}
+          />
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">The house takes this % of each settled pot.</p>
+            <Button size="sm" className="tactile active:scale-95" disabled={savingRake} onClick={saveRake}>Save</Button>
+          </div>
+        </div>
       </div>
 
       <div>

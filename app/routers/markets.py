@@ -1,7 +1,7 @@
 import uuid
 from collections import Counter
 from datetime import timedelta, timezone
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
@@ -25,6 +25,7 @@ from ..models import (
     TxnKind,
     User,
     Vote,
+    get_setting,
     random_nickname,
     record_event,
     record_txn,
@@ -398,7 +399,21 @@ def vote(
 def _apply_settlement(db: Session, market: Market, outcome: str, fraction: Decimal | None = None) -> None:
     """Run the engine, write payouts, credit balances, mark resolved."""
     group = db.get(Group, market.group_id)
-    payouts = settle(_stakes(market), outcome, rake=group.rake, yes_fraction=fraction)
+    # The house takes a tiny admin-adjustable cut on top of the group's own rake.
+    house_rake = Decimal(get_setting(db, "house_rake", "0") or "0")
+    effective_rake = group.rake + house_rake
+    payouts = settle(_stakes(market), outcome, rake=effective_rake, yes_fraction=fraction)
+
+    # Record the house's cut so it can be summed for earnings. Rake is only taken
+    # on a genuinely two-sided, non-VOID settlement (matches the engine's guards).
+    odds = compute_odds(_stakes(market))
+    if outcome != "VOID" and odds.yes_pool > 0 and odds.no_pool > 0 and house_rake > 0:
+        house_take = (odds.total * house_rake).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+        if house_take > 0:
+            record_event(
+                db, "house_rake", group_id=market.group_id, market_id=market.id,
+                amount=str(house_take),
+            )
 
     for b in market.bets:
         p = payouts.get(b.id, Decimal("0"))

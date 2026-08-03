@@ -285,6 +285,29 @@ class IdempotencyKey(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class Setting(Base):
+    """Key/value store for admin-adjustable global settings (e.g. house_rake)."""
+    __tablename__ = "settings"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str] = mapped_column(String, nullable=False)
+
+
+def get_setting(db, key: str, default: str | None = None) -> str | None:
+    """Read a global setting, returning `default` when unset."""
+    row = db.get(Setting, key)
+    return row.value if row is not None else default
+
+
+def set_setting(db, key: str, value: str) -> None:
+    """Upsert a global setting (does not commit)."""
+    row = db.get(Setting, key)
+    if row is None:
+        db.add(Setting(key=key, value=value))
+    else:
+        row.value = value
+
+
 def record_event(
     db,
     type: str,

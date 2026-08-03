@@ -14,6 +14,7 @@ import { MarketsTab } from "@/components/market/MarketsTab";
 import { StatsTab } from "@/components/group/StatsTab";
 import { TimelineTab } from "@/components/group/TimelineTab";
 import { LiveFeed } from "@/components/group/LiveFeed";
+import { SettleTab } from "@/components/group/SettleTab";
 import { ShareSheet } from "@/components/ShareSheet";
 
 function rememberGroup(id: string) {
@@ -57,10 +58,30 @@ export function GroupPage() {
   const [liveEvents, setLiveEvents] = useState<TimelineEvent[]>([]);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useGroupStream(id, (e) => {
-    setLiveEvents((prev) => [e, ...prev].slice(0, 20));
+    setLiveEvents((prev) => {
+      // Drop the optimistic placeholder once the real comment streams back.
+      const deduped = e.type === "comment"
+        ? prev.filter((p) => !(p.id.startsWith("local-") && p.type === "comment" && p.payload?.text === e.payload?.text))
+        : prev;
+      return [e, ...deduped].slice(0, 20);
+    });
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
     refreshTimer.current = setTimeout(() => refresh(), 400);
   });
+
+  // Optimistic comment: the author sees their own line immediately, without
+  // waiting on the SSE round-trip (which can lag under load).
+  const addLocalComment = useCallback((text: string) => {
+    const optimistic: TimelineEvent = {
+      id: `local-${Date.now()}`,
+      ts: new Date().toISOString(),
+      type: "comment",
+      actor_name: user?.name ?? "You",
+      market_id: null,
+      payload: { text, actor_name: user?.name ?? "You" },
+    };
+    setLiveEvents((prev) => [optimistic, ...prev].slice(0, 20));
+  }, [user?.name]);
 
   // Seed the activity feed with recent history so it's never empty on arrival.
   useEffect(() => {
@@ -105,12 +126,13 @@ export function GroupPage() {
         </div>
       )}
 
-      <LiveFeed events={liveEvents} groupId={id} />
+      <LiveFeed events={liveEvents} groupId={id} onLocalEcho={addLocalComment} />
 
       <Tabs defaultValue="markets">
         <TabsList className="w-full">
           <TabsTrigger value="markets" className="flex-1">Markets</TabsTrigger>
           <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
+          <TabsTrigger value="settle" className="flex-1">Settle</TabsTrigger>
           <TabsTrigger value="timeline" className="flex-1">Timeline</TabsTrigger>
         </TabsList>
         <TabsContent value="markets" className="mt-4">
@@ -118,6 +140,9 @@ export function GroupPage() {
         </TabsContent>
         <TabsContent value="stats" className="mt-4">
           <StatsTab group={group} markets={markets} />
+        </TabsContent>
+        <TabsContent value="settle" className="mt-4">
+          <SettleTab groupId={id} />
         </TabsContent>
         <TabsContent value="timeline" className="mt-4">
           <TimelineTab groupId={id} />

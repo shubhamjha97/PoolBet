@@ -110,6 +110,21 @@ def test_scalar_requires_and_validates_fraction():
             pass
 
 
+def test_scalar_with_rake_conserves():
+    # pot 200, rake 10% -> distributable 180; YES arm 0.7*180=126, NO arm 54.
+    stakes = [S("a", "YES", 100), S("b", "NO", 100)]
+    payouts = settle(stakes, "SCALAR", rake=Decimal("0.1"), yes_fraction=Decimal("0.7"))
+    assert payouts["a"] == Decimal("126.00")
+    assert payouts["b"] == Decimal("54.00")
+    assert sum(payouts.values()) == Decimal("180.00")  # pot minus rake
+
+
+def test_many_bettors_conserved_to_the_cent():
+    stakes = [S(f"y{i}", "YES", 7) for i in range(9)] + [S("n", "NO", 13)]
+    payouts = settle(stakes, "YES")
+    assert sum(payouts.values()) == Decimal("76.00")  # 9*7 + 13, nothing lost
+
+
 def test_invalid_outcome_raises():
     try:
         settle([S("a", "YES", 1)], "MAYBE")

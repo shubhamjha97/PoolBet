@@ -145,6 +145,21 @@ def test_login_returns_same_account_and_rejects_duplicates():
     assert r.status_code == 401
 
 
+def test_my_groups_lists_only_my_memberships():
+    a = _user("MineA")
+    b = _user("MineB")
+    g1 = client.post("/groups", json={"name": "MineG1"}, headers=_auth(a["api_token"])).json()
+    g2 = client.post("/groups", json={"name": "MineG2"}, headers=_auth(b["api_token"])).json()
+    client.post("/groups/join", json={"invite_code": g2["invite_code"]}, headers=_auth(a["api_token"]))
+
+    mine_a = client.get("/groups/mine", headers=_auth(a["api_token"]))
+    assert mine_a.status_code == 200
+    assert {g["name"] for g in mine_a.json()} == {"MineG1", "MineG2"}
+    # b only belongs to g2
+    assert {g["name"] for g in client.get("/groups/mine", headers=_auth(b["api_token"])).json()} == {"MineG2"}
+    _ = g1  # created for isolation
+
+
 def test_non_member_cannot_view_group():
     owner = _user("Owner")
     outsider = _user("Outsider")

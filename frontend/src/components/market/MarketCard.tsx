@@ -41,7 +41,7 @@ function AnimatedOddsBar({ yesPct, total }: { yesPct: number; total: number }) {
   // every frame on every card and murders iOS Safari). Spring width + a pulse on
   // new volume keep it lively where it matters.
   return (
-    <motion.div animate={controls} className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-zinc-800/80 p-0.5">
+    <motion.div animate={controls} className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800/80 p-0.5">
       <motion.div className="h-full rounded-l-full bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.4)]" animate={{ width: `${yesPct}%` }} initial={false} transition={spring} />
       <motion.div className="h-full rounded-r-full bg-gradient-to-l from-pink-600 to-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.4)]" animate={{ width: `${100 - yesPct}%` }} initial={false} transition={spring} />
     </motion.div>
@@ -96,7 +96,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
   const probPts = oddsSeries(market.bets);
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-glass">
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm dark:shadow-glass">
       <button className="w-full p-4 text-left" onClick={() => { setOpen((o) => !o); haptic("select"); }}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 font-medium">{market.question}</div>

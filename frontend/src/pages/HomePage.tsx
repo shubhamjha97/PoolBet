@@ -56,13 +56,17 @@ export function HomePage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const ids = loadGroupIds();
-      const results = await Promise.all(
-        ids.map((id) => api<Group>("GET", `/groups/${id}`).catch(() => null)),
-      );
-      if (cancelled) return;
-      setGroups(results.filter((g): g is Group => g !== null));
-      setLoading(false);
+      try {
+        const gs = await api<Group[]>("GET", "/groups/mine");
+        if (!cancelled) setGroups(gs);
+      } catch {
+        // fallback to any locally-remembered groups
+        const results = await Promise.all(
+          loadGroupIds().map((id) => api<Group>("GET", `/groups/${id}`).catch(() => null)),
+        );
+        if (!cancelled) setGroups(results.filter((g): g is Group => g !== null));
+      }
+      if (!cancelled) setLoading(false);
     })();
     return () => {
       cancelled = true;

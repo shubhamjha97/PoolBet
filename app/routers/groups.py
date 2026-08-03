@@ -136,6 +136,19 @@ def join_group(
     return _serialize_group(db, group)
 
 
+@router.get("/mine", response_model=list[GroupOut])
+def my_groups(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    """All groups the current user belongs to (defined BEFORE /{group_id} so the
+    literal path wins). Lets the client list groups server-side, not from localStorage."""
+    groups = db.scalars(
+        select(Group)
+        .join(Membership, Membership.group_id == Group.id)
+        .where(Membership.user_id == user.id)
+        .order_by(Group.created_at.desc())
+    ).all()
+    return [_serialize_group(db, g) for g in groups]
+
+
 @router.get("/{group_id}", response_model=GroupOut)
 def get_group(
     group_id: str,

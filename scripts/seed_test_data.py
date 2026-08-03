@@ -1,97 +1,119 @@
-"""Seed PoolBet with test users, groups, markets, and bets via the live API,
-then dump credentials to TEST_USERS.md.
+"""Seed PoolBet with a rich test dataset via the live API, then dump credentials
+to TEST_USERS.md.
 
-Run AFTER the schema is finalized and the server is restarted:
-    ./.venv/bin/python scripts/seed_test_data.py
+Wipes to a clean state (recreate poolbet.db + restart the server first), then
+creates users, several groups, markets (open / resolved / scalar), and many bets
+(some anonymous). Run:  ./.venv/bin/python scripts/seed_test_data.py
 """
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 import httpx
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
 PW = "test1234"
-c = httpx.Client(base_url=BASE, timeout=15)
+c = httpx.Client(base_url=BASE, timeout=20)
+
+# Ava is created first → app admin (also POOLBET_ADMIN_NAMES=Ava).
+USERS = ["Ava", "Ben", "Cy", "Dee", "Eve", "Finn", "Gus", "Hana"]
+tokens: dict[str, str] = {}
 
 
-def h(t):
-    return {"Authorization": f"Bearer {t}"}
+def h(name):
+    return {"Authorization": f"Bearer {tokens[name]}"}
 
 
 def signup(name):
     r = c.post("/auth/signup", json={"name": name, "password": PW})
+    if r.status_code == 409:  # already exists → log in
+        r = c.post("/auth/login", json={"name": name, "password": PW})
     r.raise_for_status()
-    return r.json()
+    tokens[name] = r.json()["api_token"]
+
+
+def make_group(owner, name, members, dispute_hours=0, credits="1000"):
+    g = c.post("/groups", json={"name": name, "starting_credits": credits, "dispute_window_hours": dispute_hours},
+               headers=h(owner)).json()
+    for m in members:
+        if m != owner:
+            c.post("/groups/join", json={"invite_code": g["invite_code"]}, headers=h(m))
+    return g
+
+
+def make_market(gid, owner, question, hours, rules=None):
+    body = {"question": question, "closes_at": (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat()}
+    if rules:
+        body["rules"] = rules
+    return c.post(f"/groups/{gid}/markets", json=body, headers=h(owner)).json()["id"]
+
+
+def bet(mid, name, side, amt, anon=False):
+    c.post(f"/markets/{mid}/bets", json={"side": side, "amount": str(amt), "anonymous": anon}, headers=h(name))
+
+
+def resolve(mid, owner, outcome, pct=None):
+    body = {"outcome": outcome}
+    if pct is not None:
+        body["yes_percent"] = pct
+    c.post(f"/markets/{mid}/resolve", json=body, headers=h(owner))
+    c.post(f"/markets/{mid}/settle", headers=h(owner))  # 0h window → proposer settles now
 
 
 def main():
-    # 4 test users
-    names = ["Ava", "Ben", "Cy", "Dee"]
-    users = {n: signup(n) for n in names}
-    print("created users:", ", ".join(names))
+    for u in USERS:
+        signup(u)
+    print("users:", ", ".join(USERS))
 
-    ava = users["Ava"]["api_token"]
+    # ---- Group 1: Test League (everyone) ----
+    g1 = make_group("Ava", "Test League", USERS, dispute_hours=0)
+    m = make_market(g1["id"], "Ava", "Will it rain this weekend?", 48, "Resolves YES if >1mm falls Sat/Sun.")
+    bet(m, "Ava", "YES", 150); bet(m, "Ben", "NO", 100); bet(m, "Cy", "YES", 80, anon=True)
+    bet(m, "Dee", "NO", 120); bet(m, "Eve", "YES", 60); bet(m, "Finn", "NO", 40, anon=True)
+    m = make_market(g1["id"], "Ava", "Will Ava finish the marathon under 4h?", 72)
+    bet(m, "Ben", "YES", 90); bet(m, "Cy", "NO", 130); bet(m, "Gus", "YES", 50)
+    # resolved YES
+    mr = make_market(g1["id"], "Ava", "Did the Lakers win last night?", 0.001)
+    bet(mr, "Ava", "YES", 200); bet(mr, "Ben", "NO", 120); bet(mr, "Hana", "YES", 70)
+    # scalar resolved (YES 65%)
+    ms = make_market(g1["id"], "Ava", "Did the Chiefs cover the spread?", 0.001)
+    bet(ms, "Cy", "YES", 100); bet(ms, "Dee", "NO", 100); bet(ms, "Eve", "YES", 60)
+    time.sleep(1.3)
+    resolve(mr, "Ava", "YES")
+    resolve(ms, "Ava", "SCALAR", pct=65)
 
-    # Ava creates a group with a 0h dispute window (so markets can settle in-test)
-    g = c.post("/groups", json={"name": "Test League", "starting_credits": "1000", "dispute_window_hours": 0},
-               headers=h(ava)).json()
-    gid, code = g["id"], g["invite_code"]
-    for n in ["Ben", "Cy", "Dee"]:
-        c.post("/groups/join", json={"invite_code": code}, headers=h(users[n]["api_token"]))
-    print(f"group 'Test League' ({gid}) — code {code}, 4 members")
+    # ---- Group 2: Degens ----
+    g2 = make_group("Ben", "Degens", ["Ben", "Cy", "Eve", "Finn"], dispute_hours=0)
+    m = make_market(g2["id"], "Ben", "BTC above 100k by Friday?", 60)
+    bet(m, "Ben", "YES", 200); bet(m, "Cy", "NO", 150, anon=True); bet(m, "Eve", "YES", 120); bet(m, "Finn", "NO", 90)
+    mr = make_market(g2["id"], "Ben", "Will Finn ship the feature today?", 0.001)
+    bet(mr, "Cy", "NO", 110); bet(mr, "Eve", "YES", 80); bet(mr, "Finn", "YES", 140)
+    time.sleep(1.3)
+    resolve(mr, "Ben", "NO")
 
-    def market(q, hrs, rules=None):
-        body = {"question": q, "closes_at": (datetime.now(timezone.utc) + timedelta(hours=hrs)).isoformat()}
-        if rules:
-            body["rules"] = rules
-        return c.post(f"/groups/{gid}/markets", json=body, headers=h(ava)).json()["id"]
+    # ---- Group 3: Office Pool ----
+    g3 = make_group("Ava", "Office Pool", ["Ava", "Dee", "Gus", "Hana"], dispute_hours=12, credits="500")
+    m = make_market(g3["id"], "Ava", "Return-to-office 5 days a week next quarter?", 96)
+    bet(m, "Dee", "NO", 200); bet(m, "Gus", "NO", 150); bet(m, "Hana", "YES", 80); bet(m, "Ava", "YES", 60)
 
-    def bet(mid, tok, side, amt, anon=False):
-        c.post(f"/markets/{mid}/bets", json={"side": side, "amount": str(amt), "anonymous": anon}, headers=h(tok))
+    print("groups: Test League (8), Degens (4), Office Pool (4)")
+    print("markets: 8 (2 resolved, 1 scalar-resolved); ~30 bets incl. anonymous")
 
-    # An open market with a spread of bets (some anonymous)
-    m1 = market("Will it rain this weekend?", 48, rules="Resolves YES if >1mm falls at the city gauge Sat/Sun.")
-    bet(m1, ava, "YES", 150)
-    bet(m1, users["Ben"]["api_token"], "NO", 100)
-    bet(m1, users["Cy"]["api_token"], "YES", 80, anon=True)
-    bet(m1, users["Dee"]["api_token"], "NO", 120)
-
-    # A second open market
-    m2 = market("Will Ava finish the marathon under 4h?", 72)
-    bet(m2, users["Ben"]["api_token"], "YES", 60)
-    bet(m2, users["Cy"]["api_token"], "NO", 90)
-
-    # A short market we resolve + settle so Stats/timeline have a completed event
-    m3 = market("Did the Lakers win last night?", 0.001)
-    bet(m3, ava, "YES", 200)
-    bet(m3, users["Ben"]["api_token"], "NO", 120)
-    import time; time.sleep(1.2)
-    c.post(f"/markets/{m3}/resolve", json={"outcome": "YES"}, headers=h(ava))
-    c.post(f"/markets/{m3}/settle", headers=h(ava))
-    print("created 3 markets (1 resolved), placed 8 bets")
-
-    # Dump credentials
     lines = [
-        "# PoolBet — Test Accounts",
-        "",
-        f"Server: {BASE}",
-        f"All passwords: `{PW}`",
-        "",
-        "| Name | Password | Role |",
-        "|------|----------|------|",
+        "# PoolBet — Test Accounts", "",
+        f"Server: {BASE}  ·  all passwords: `{PW}`", "",
+        "| Name | Password | Notes |", "|------|----------|-------|",
     ]
-    for n in names:
-        role = "owner / admin*" if n == "Ava" else "member"
-        lines.append(f"| {n} | {PW} | {role} |")
+    for u in USERS:
+        note = "owner of Test League + Office Pool · **app admin**" if u == "Ava" else \
+               "owner of Degens" if u == "Ben" else "member"
+        lines.append(f"| {u} | {PW} | {note} |")
     lines += [
-        "",
-        f"**Group:** Test League — invite code **{code}**",
-        "",
-        "*Ava is the group owner. To make her an app admin (for the rollback dashboard),",
-        "set env `POOLBET_ADMIN_NAMES=Ava` before starting the server, or the first-ever",
-        "user is admin by default.*",
-        "",
-        "Log in at the server URL with any name above + the password.",
+        "", "## Groups",
+        f"- **Test League** — all 8 users · code `{g1['invite_code']}` · open + resolved markets",
+        f"- **Degens** — Ben, Cy, Eve, Finn · code `{g2['invite_code']}`",
+        f"- **Office Pool** — Ava, Dee, Gus, Hana · code `{g3['invite_code']}`",
+        "", "Log in at the server URL with any name + the password.",
     ]
     with open("TEST_USERS.md", "w") as f:
         f.write("\n".join(lines) + "\n")

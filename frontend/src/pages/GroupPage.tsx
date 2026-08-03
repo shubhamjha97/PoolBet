@@ -62,6 +62,11 @@ export function GroupPage() {
     refreshTimer.current = setTimeout(() => refresh(), 400);
   });
 
+  // Seed the activity feed with recent history so it's never empty on arrival.
+  useEffect(() => {
+    api<TimelineEvent[]>("GET", `/groups/${id}/timeline`).then((evs) => setLiveEvents(evs.slice(0, 12))).catch(() => {});
+  }, [id]);
+
   if (loading) return <div className="flex justify-center py-16 text-muted-foreground"><Loader2 className="size-5 animate-spin" /></div>;
   if (!group) return <div className="text-muted-foreground">Group not found.</div>;
 

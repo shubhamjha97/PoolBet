@@ -1,19 +1,21 @@
 # PoolBet — Test Accounts
 
-Server: http://localhost:8000
-All passwords: `test1234`
+Server: http://localhost:8000  ·  all passwords: `test1234`
 
-| Name | Password | Role |
-|------|----------|------|
-| Ava | test1234 | owner / admin* |
-| Ben | test1234 | member |
+| Name | Password | Notes |
+|------|----------|-------|
+| Ava | test1234 | owner of Test League + Office Pool · **app admin** |
+| Ben | test1234 | owner of Degens |
 | Cy | test1234 | member |
 | Dee | test1234 | member |
+| Eve | test1234 | member |
+| Finn | test1234 | member |
+| Gus | test1234 | member |
+| Hana | test1234 | member |
 
-**Group:** Test League — invite code **LK4FA9**
+## Groups
+- **Test League** — all 8 users · code `XN9AFV` · open + resolved markets
+- **Degens** — Ben, Cy, Eve, Finn · code `TVULXQ`
+- **Office Pool** — Ava, Dee, Gus, Hana · code `SU2UWY`
 
-*Ava is the group owner. To make her an app admin (for the rollback dashboard),
-set env `POOLBET_ADMIN_NAMES=Ava` before starting the server, or the first-ever
-user is admin by default.*
-
-Log in at the server URL with any name above + the password.
+Log in at the server URL with any name + the password.

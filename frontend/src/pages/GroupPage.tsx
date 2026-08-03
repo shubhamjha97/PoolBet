@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Copy, Link2, Plus, Loader2, QrCode } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import type { AccessRequest, Group, Market, TimelineEvent } from "@/lib/types";
@@ -14,7 +14,7 @@ import { MarketsTab } from "@/components/market/MarketsTab";
 import { StatsTab } from "@/components/group/StatsTab";
 import { TimelineTab } from "@/components/group/TimelineTab";
 import { LiveFeed } from "@/components/group/LiveFeed";
-import { QrDialog } from "@/components/group/QrDialog";
+import { ShareSheet } from "@/components/ShareSheet";
 
 function rememberGroup(id: string) {
   try {
@@ -31,7 +31,7 @@ export function GroupPage() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [qrOpen, setQrOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -69,8 +69,6 @@ export function GroupPage() {
 
   const buyIn = () => api("POST", `/groups/${id}/buy-in`).then(() => { toast.success("Bought in"); haptic("success"); refresh(); }).catch((e) => toast.error(e.message));
   const approve = (reqId: string) => api("POST", `/groups/${id}/access-requests/${reqId}/approve`).then(() => { toast.success("Approved"); refresh(); }).catch((e) => toast.error(e.message));
-  const copy = (text: string, label: string) => { navigator.clipboard.writeText(text); toast.success(label); haptic("select"); };
-
   return (
     <div className="animate-fade-up space-y-5">
       <div>
@@ -83,12 +81,10 @@ export function GroupPage() {
             <Button variant="outline" size="sm" className="tactile mt-1 active:scale-95" onClick={buyIn}><Plus className="size-3.5" /> Buy in</Button>
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <div className="mt-3 flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">invite code</span>
           <span className="rounded-md border bg-secondary px-2.5 py-1 font-mono tracking-widest text-primary">{group.invite_code}</span>
-          <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(group.invite_code, "Code copied")}><Copy className="size-3.5" /> Code</Button>
-          <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(`${location.origin}/#/group/${id}`, "Link copied")}><Link2 className="size-3.5" /> Link</Button>
-          <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => { setQrOpen(true); haptic("select"); }}><QrCode className="size-3.5" /> QR</Button>
+          <Button size="sm" className="tactile ml-auto active:scale-95" onClick={() => { setShareOpen(true); haptic("select"); }}><Share2 className="size-3.5" /> Share</Button>
         </div>
       </div>
 
@@ -123,7 +119,7 @@ export function GroupPage() {
         </TabsContent>
       </Tabs>
 
-      <QrDialog open={qrOpen} onOpenChange={setQrOpen} url={`${location.origin}/#/group/${id}`} label={group.name} />
+      <ShareSheet open={shareOpen} onOpenChange={setShareOpen} title={`Invite to ${group.name}`} url={`${location.origin}/#/group/${id}`} code={group.invite_code} />
     </div>
   );
 }

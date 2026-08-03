@@ -91,8 +91,28 @@ export function HomePage() {
     setGroups((prev) => (prev.some((x) => x.id === g.id) ? prev : [...prev, g]));
   }
 
+  // Net stats across all the user's groups.
+  const myBalance = (g: Group) => Number(g.members.find((m) => m.user_id === user?.id)?.balance ?? 0);
+  const totalBalance = groups.reduce((s, g) => s + myBalance(g), 0);
+  const totalStart = groups.reduce((s, g) => s + Number(g.starting_credits), 0);
+  const pnl = totalBalance - totalStart;
+
   return (
     <div className="animate-fade-up space-y-6">
+      {groups.length > 0 && (
+        <div className="rounded-2xl border bg-card p-5">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Net balance</div>
+          <div className="mt-1 font-mono text-4xl font-bold tabular-nums">{fmt(totalBalance)}</div>
+          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            <span><span className="font-mono font-semibold tabular-nums">{groups.length}</span> <span className="text-muted-foreground">{groups.length === 1 ? "group" : "groups"}</span></span>
+            <span className={pnl >= 0 ? "text-yes" : "text-no"}>
+              <span className="font-mono font-semibold tabular-nums">{pnl >= 0 ? "+" : ""}{fmt(pnl)}</span>{" "}
+              <span className="text-muted-foreground">P&amp;L</span>
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Your groups</h1>
         <p className="text-muted-foreground">Pools you play in. Create one or join with a code.</p>

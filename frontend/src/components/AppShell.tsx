@@ -53,7 +53,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-[820px] px-4 px-safe pb-28 pt-5">
+      <main className="relative z-10 mx-auto w-full max-w-[820px] pb-28 pt-5 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
         <Outlet />
       </main>
     </div>

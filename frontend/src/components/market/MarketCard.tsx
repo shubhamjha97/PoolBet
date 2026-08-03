@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { motion, useAnimationControls } from "framer-motion";
 import {
-  ChevronDown, Link2, Camera, Copy, Swords, TrendingUp, Minus, Plus, RotateCcw, Lock,
+  ChevronDown, Share2, Camera, Copy, Swords, TrendingUp, Minus, Plus, RotateCcw, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, upload } from "@/lib/api";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { ShareSheet } from "@/components/ShareSheet";
 
 const STATUS_STYLES: Record<string, string> = {
   OPEN: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -56,6 +57,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
   const [pct, setPct] = useState(50);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const { total, yes } = poolPct(market);
   const ci = closesInfo(market.closes_at);
@@ -85,10 +87,9 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
   const fade = (b: Bet) => { setSide(b.side === "YES" ? "NO" : "YES"); setAmt(Number(b.amount)); haptic("select"); };
   const raise = (b: Bet) => { setSide(b.side); setAmt(Math.round(Number(b.amount) * 1.5)); haptic("select"); };
 
-  const copyLink = (e: MouseEvent) => {
+  const openShare = (e: MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(`${location.origin}/#/market/${market.id}`);
-    toast.success("Market link copied");
+    setShareOpen(true);
     haptic("select");
   };
 
@@ -100,7 +101,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 font-medium">{market.question}</div>
           <div className="flex shrink-0 items-center gap-2">
-            <span className="tap-target flex items-center justify-center rounded-md text-muted-foreground hover:text-primary" onClick={copyLink} role="button" aria-label="Copy link"><Link2 className="size-4" /></span>
+            <span className="tap-target flex items-center justify-center rounded-md text-muted-foreground hover:text-primary" onClick={openShare} role="button" aria-label="Share market"><Share2 className="size-4" /></span>
             <span className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium", STATUS_STYLES[market.status])}>
               {market.status === "OPEN" && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
               {market.status}
@@ -260,6 +261,8 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
           </div>
         </div>
       )}
+
+      <ShareSheet open={shareOpen} onOpenChange={setShareOpen} title={market.question} url={`${location.origin}/#/market/${market.id}`} />
     </div>
   );
 }

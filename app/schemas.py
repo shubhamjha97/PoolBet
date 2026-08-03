@@ -3,10 +3,12 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from .sanitize import CleanStr
+
 
 # ---------- auth / users ----------
 class SignupIn(BaseModel):
-    name: str = Field(min_length=1, max_length=60)
+    name: CleanStr = Field(min_length=1, max_length=60)
     password: str = Field(min_length=4, max_length=200)
 
 
@@ -23,7 +25,7 @@ class UserOut(BaseModel):
 
 # ---------- groups ----------
 class GroupCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=80)
+    name: CleanStr = Field(min_length=1, max_length=80)
     starting_credits: Decimal | None = None
     dispute_window_hours: int | None = Field(default=None, ge=0, le=168)
     rake: Decimal | None = Field(default=None, ge=0, le=Decimal("0.2"))
@@ -52,9 +54,9 @@ class GroupJoin(BaseModel):
 
 # ---------- markets ----------
 class MarketCreate(BaseModel):
-    question: str = Field(min_length=3, max_length=280)
+    question: CleanStr = Field(min_length=3, max_length=280)
     closes_at: datetime
-    rules: str | None = Field(default=None, max_length=2000)
+    rules: CleanStr | None = Field(default=None, max_length=2000)
 
 
 class BetOut(BaseModel):
@@ -91,7 +93,7 @@ class MarketOut(BaseModel):
 # ---------- bets / resolution ----------
 class BetCreate(BaseModel):
     side: str = Field(pattern="^(YES|NO)$")
-    amount: Decimal = Field(gt=0)
+    amount: Decimal = Field(gt=0, le=Decimal("1000000000"))  # cap guards against overflow/abuse
     anonymous: bool = False
 
 
@@ -102,7 +104,7 @@ class ResolveIn(BaseModel):
 
 
 class DisputeIn(BaseModel):
-    reason: str = Field(min_length=3, max_length=280)
+    reason: CleanStr = Field(min_length=3, max_length=280)
 
 
 class VoteIn(BaseModel):

@@ -215,6 +215,12 @@ def place_bet(
     if not market:
         raise HTTPException(status_code=404, detail="market not found")
     member = require_membership(db, market.group_id, user)
+    # Strict transaction: lock this member's row so the balance check + debit are
+    # atomic against concurrent bets (a real row lock on Postgres; SQLite already
+    # serializes writes). Prevents double-spend / overdraft races.
+    member = db.scalar(
+        select(Membership).where(Membership.id == member.id).with_for_update()
+    )
 
     if market.status != MarketStatus.OPEN or _aware(market.closes_at) <= utcnow():
         raise HTTPException(status_code=409, detail="market is not open for betting")
@@ -254,7 +260,11 @@ def place_bet(
         actor_name=user.name if not body.anonymous else None,
         market_question=market.question,
     )
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="could not place bet — please retry")
     db.refresh(market)
 
     # Notify the rest of the group (best-effort; never breaks the request).

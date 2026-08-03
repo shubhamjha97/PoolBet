@@ -174,3 +174,12 @@ def _snapshot_after_commit(session):
                 broker.publish(ev["group_id"], ev)
     except Exception:
         pass
+
+    # Append every event to the Redpanda commit-log topic (no-op unless configured).
+    try:
+        from .redpanda import produce_event
+
+        for ev in pending:
+            produce_event(ev)
+    except Exception:
+        pass

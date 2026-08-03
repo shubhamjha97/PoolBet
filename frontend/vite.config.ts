@@ -9,8 +9,8 @@ const apiPaths = [
 ];
 
 export default defineConfig({
-  // Served by FastAPI under /next/ during the migration (keeps the vanilla app at /).
-  base: "/next/",
+  // React app is now the primary UI served at the root.
+  base: "/",
   plugins: [react()],
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },

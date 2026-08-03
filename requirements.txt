@@ -18,3 +18,4 @@ psycopg[binary]==3.2.3
 pytest==8.3.4
 httpx==0.28.1
 slowapi==0.1.9
+kafka-python-ng==2.2.3

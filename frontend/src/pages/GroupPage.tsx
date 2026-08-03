@@ -85,7 +85,7 @@ export function GroupPage() {
           <span className="text-muted-foreground">invite code</span>
           <span className="rounded-md border bg-secondary px-2.5 py-1 font-mono tracking-widest text-primary">{group.invite_code}</span>
           <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(group.invite_code, "Code copied")}><Copy className="size-3.5" /> Code</Button>
-          <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(`${location.origin}/next/#/group/${id}`, "Link copied")}><Link2 className="size-3.5" /> Link</Button>
+          <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(`${location.origin}/#/group/${id}`, "Link copied")}><Link2 className="size-3.5" /> Link</Button>
         </div>
       </div>
 

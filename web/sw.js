@@ -1,5 +1,5 @@
 // PoolBet service worker — app-shell precache + network-first.
-const CACHE = "poolbet-v1";
+const CACHE = "poolbet-v2";
 
 const SHELL = [
   "/",

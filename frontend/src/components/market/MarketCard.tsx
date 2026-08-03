@@ -36,10 +36,15 @@ function AnimatedOddsBar({ yesPct, total }: { yesPct: number; total: number }) {
   }, [total, controls]);
 
   const spring = { type: "spring" as const, stiffness: 120, damping: 20 };
+  const flow = { duration: 2.5, repeat: Infinity, ease: "linear" as const };
   return (
     <motion.div animate={controls} className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-zinc-800/80 p-0.5">
-      <motion.div className="h-full rounded-l-full bg-yes shadow-[0_0_12px_rgba(34,197,94,0.45)]" animate={{ width: `${yesPct}%` }} initial={false} transition={spring} />
-      <motion.div className="h-full rounded-r-full bg-no shadow-[0_0_12px_rgba(236,72,153,0.45)]" animate={{ width: `${100 - yesPct}%` }} initial={false} transition={spring} />
+      <motion.div className="relative h-full overflow-hidden rounded-l-full shadow-[0_0_12px_rgba(34,197,94,0.4)]" animate={{ width: `${yesPct}%` }} initial={false} transition={spring}>
+        <motion.div className="absolute inset-0 bg-[linear-gradient(90deg,#059669,#34d399,#059669)] bg-[length:200%_100%]" animate={{ backgroundPosition: ["0% 0%", "200% 0%"] }} transition={flow} />
+      </motion.div>
+      <motion.div className="relative h-full overflow-hidden rounded-r-full shadow-[0_0_12px_rgba(236,72,153,0.4)]" animate={{ width: `${100 - yesPct}%` }} initial={false} transition={spring}>
+        <motion.div className="absolute inset-0 bg-[linear-gradient(90deg,#db2777,#f472b6,#db2777)] bg-[length:200%_100%]" animate={{ backgroundPosition: ["0% 0%", "200% 0%"] }} transition={flow} />
+      </motion.div>
     </motion.div>
   );
 }
@@ -84,7 +89,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
 
   const copyLink = (e: MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(`${location.origin}/next/#/market/${market.id}`);
+    navigator.clipboard.writeText(`${location.origin}/#/market/${market.id}`);
     toast.success("Market link copied");
     haptic("select");
   };

@@ -1,0 +1,26 @@
+# Keep large/generated/irrelevant files out of Claude's context.
+
+# Dependencies & builds
+node_modules/
+frontend/dist/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Lockfiles (huge, low signal)
+frontend/package-lock.json
+
+# Local data / secrets / artifacts
+*.db
+.vapid.json
+.env
+web/uploads/
+snapshots/
+
+# Logs & OS
+*.log
+.DS_Store
+
+# Alembic autogen noise (keep env.py; ignore version churn if desired)
+# app/alembic/versions/

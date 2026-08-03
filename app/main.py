@@ -74,20 +74,24 @@ def health():
     return {"status": "ok", "service": "poolbet"}
 
 
-# ---- React migration preview (served under /next while the vanilla app stays at /) ----
+# ---- frontend ----
 DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
-if DIST_DIR.exists():
-    app.mount("/next", StaticFiles(directory=DIST_DIR, html=True), name="next")
-
-
-# ---- frontend (served by the same server) ----
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
+# React app (primary UI) served at the root; its bundled assets under /assets.
+if (DIST_DIR / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
+    app.mount("/next", StaticFiles(directory=DIST_DIR, html=True), name="next")  # back-compat
+
+# PWA static (icons, etc.) + the retired vanilla app at /legacy.
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+app.mount("/legacy", StaticFiles(directory=WEB_DIR, html=True), name="legacy")
 
 
 @app.get("/", include_in_schema=False)
 def index():
-    return FileResponse(WEB_DIR / "index.html")
+    target = DIST_DIR / "index.html" if DIST_DIR.exists() else WEB_DIR / "index.html"
+    return FileResponse(target)
 
 
 # ---- PWA: service worker must be root-scoped; manifest at a stable path ----

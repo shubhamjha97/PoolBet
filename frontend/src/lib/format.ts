@@ -38,6 +38,24 @@ export function oddsSeries(bets: Bet[]) {
   });
 }
 
+// Each outcome's implied probability (share of the pot, %) over time — one line
+// per outcome for N-way markets.
+export function oddsSeriesMulti(bets: Bet[], outcomes: string[]) {
+  const sorted = [...bets].filter((b) => b.outcome).sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+  const pools: Record<string, number> = {};
+  const points: Record<string, { t: number; v: number }[]> = {};
+  for (const o of outcomes) { pools[o] = 0; points[o] = []; }
+  let total = 0;
+  for (const b of sorted) {
+    if (!b.outcome || !(b.outcome in pools)) continue;
+    pools[b.outcome] += Number(b.amount);
+    total += Number(b.amount);
+    const t = Date.parse(b.created_at);
+    for (const o of outcomes) points[o].push({ t, v: total ? Math.round((pools[o] / total) * 100) : 0 });
+  }
+  return outcomes.map((o) => ({ name: o, points: points[o] }));
+}
+
 export function timeAgo(ts: string) {
   const s = Math.max(0, (Date.now() - Date.parse(ts)) / 1000);
   if (s < 60) return "just now";

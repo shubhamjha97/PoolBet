@@ -6,11 +6,11 @@ import {
 import { toast } from "sonner";
 import { api, upload } from "@/lib/api";
 import type { Bet, Market, Side } from "@/lib/types";
-import { fmt, closesInfo, poolPct, oddsSeries } from "@/lib/format";
+import { fmt, closesInfo, poolPct, oddsSeries, oddsSeriesMulti } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { ProbabilityChart } from "@/components/Charts";
+import { ProbabilityChart, MultiLineChart } from "@/components/Charts";
 import { Button } from "@/components/ui/button";
 import { SlideToConfirm } from "@/components/market/SlideToConfirm";
 import { Input } from "@/components/ui/input";
@@ -153,6 +153,17 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
               <ProbabilityChart points={probPts} />
             </div>
           )}
+
+          {isMulti && (() => {
+            const series = oddsSeriesMulti(market.bets, market.outcomes ?? []);
+            if (!series.some((s) => s.points.length >= 2)) return null;
+            return (
+              <div className="mb-3 rounded-lg bg-secondary p-3">
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Odds over time</div>
+                <MultiLineChart series={series} />
+              </div>
+            );
+          })()}
 
           {market.rules && (
             <div className="mb-3 rounded-lg bg-secondary p-3">

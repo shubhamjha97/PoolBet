@@ -34,6 +34,15 @@ test("commit log paginates and filters by date", async ({ page }) => {
   await expect(page.getByText("No events in this range.")).toBeHidden();
 });
 
+test("group leaderboard (Ranks) tab renders ranked standings", async ({ page }) => {
+  await login(page, "Ava");
+  await page.getByText("Test League").click();
+  const ranks = page.getByRole("tab", { name: "Ranks" });
+  await ranks.click();
+  await expect(ranks).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByText("Ava").first()).toBeVisible();
+});
+
 test("session telemetry emits a session_ping when the tab is hidden", async ({ page }) => {
   await login(page, "Ava");
   await page.reload(); // boot with a token present so telemetry is active

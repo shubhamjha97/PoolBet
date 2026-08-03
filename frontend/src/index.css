@@ -92,6 +92,16 @@
   50% { transform: translate3d(-7vmax, -5vmax, 0) scale(1.1); }
 }
 
+/* landing logo: gentle float + breathing glow */
+@keyframes pb-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -5px, 0); }
+}
+@keyframes pb-breathe {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.08); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }

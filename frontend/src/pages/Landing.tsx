@@ -19,22 +19,23 @@ const GoogleIcon = () => (
 );
 
 function Hero() {
+  // An elegant token: gradient coin with a slowly-rotating specular sheen, a
+  // breathing glow, and a gentle float — GPU-only (transform/opacity), reduced
+  // to static under prefers-reduced-motion (see index.css).
   return (
-    <svg viewBox="0 0 240 132" fill="none" className="mx-auto block w-[230px] max-w-[64vw] drop-shadow-[0_8px_40px_hsl(var(--yes)/0.15)]" aria-hidden>
-      <defs>
-        <linearGradient id="gY" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="hsl(var(--yes))" stopOpacity="0.3" />
-          <stop offset="1" stopColor="hsl(var(--yes))" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <g stroke="currentColor" strokeWidth="1" className="text-border">
-        <line x1="0" y1="30" x2="240" y2="30" /><line x1="0" y1="66" x2="240" y2="66" /><line x1="0" y1="102" x2="240" y2="102" />
-      </g>
-      <path d="M2,96 C42,92 72,72 112,56 C152,40 186,30 230,20 L230,132 L2,132 Z" fill="url(#gY)" />
-      <path d="M2,42 C64,56 128,74 230,98" className="stroke-no" strokeWidth="2" strokeOpacity="0.5" strokeLinecap="round" />
-      <path d="M2,96 C42,92 72,72 112,56 C152,40 186,30 230,20" className="stroke-yes" strokeWidth="2.6" strokeLinecap="round" />
-      <circle cx="230" cy="20" r="4.5" className="animate-pulse fill-yes" />
-    </svg>
+    <div className="mx-auto grid size-36 place-items-center [animation:pb-float_7s_ease-in-out_infinite]" aria-hidden>
+      <div className="relative size-28">
+        <div className="absolute -inset-3 rounded-full bg-gradient-to-br from-yes/40 to-no/40 blur-2xl [animation:pb-breathe_6s_ease-in-out_infinite]" />
+        <div className="relative size-full rounded-full bg-gradient-to-br from-yes to-no shadow-[0_12px_44px_-10px_hsl(var(--no)/0.55)]">
+          <div className="absolute inset-0 overflow-hidden rounded-full">
+            <div className="absolute -inset-1/2 bg-[conic-gradient(from_0deg,transparent_0deg,rgba(255,255,255,0.4)_36deg,transparent_90deg)] [animation:spin_9s_linear_infinite]" />
+          </div>
+          <div className="absolute inset-[9px] grid place-items-center rounded-full bg-background/85 backdrop-blur-sm">
+            <span className="bg-gradient-to-br from-yes to-no bg-clip-text text-[40px] font-black leading-none text-transparent">P</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

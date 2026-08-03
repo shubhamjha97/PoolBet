@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { ProbabilityChart } from "@/components/Charts";
 import { Button } from "@/components/ui/button";
+import { SlideToConfirm } from "@/components/market/SlideToConfirm";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -170,10 +171,12 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
                 <Switch checked={anon} onCheckedChange={(v) => { setAnon(v); haptic("select"); }} />
                 <Lock className="size-3.5" /> Bet anonymously
               </label>
-              <Button disabled={busy || amount <= 0} className={cn("tactile h-11 w-full active:scale-95", side === "YES" ? "bg-yes text-black hover:bg-yes/90" : "bg-no text-white hover:bg-no/90")}
-                onClick={() => act(() => api("POST", `/markets/${market.id}/bets`, { side, amount: String(amount), anonymous: anon }, { "Idempotency-Key": crypto.randomUUID() }), `Bet ${fmt(amount)} on ${side}`)}>
-                Bet {side}
-              </Button>
+              <SlideToConfirm
+                disabled={busy || amount <= 0}
+                label={`Slide to bet ${fmt(amount)} on ${side}`}
+                colorClass={side === "YES" ? "bg-yes text-black" : "bg-no text-white"}
+                onConfirm={() => act(() => api("POST", `/markets/${market.id}/bets`, { side, amount: String(amount), anonymous: anon }, { "Idempotency-Key": crypto.randomUUID() }), `Bet ${fmt(amount)} on ${side}`)}
+              />
             </div>
           )}
 

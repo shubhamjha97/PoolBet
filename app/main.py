@@ -11,7 +11,7 @@ from .database import Base, engine, get_db
 from .deps import current_user, require_membership
 from .models import Membership, User
 from .push import init_vapid
-from .routers import admin, auth, events, groups, live, markets, oauth, push, users
+from .routers import admin, auth, events, groups, leaderboard, live, markets, oauth, push, users
 from .schemas import MemberOut
 
 # Importing snapshots registers the after-commit listeners that append a Snapshot
@@ -57,6 +57,7 @@ app.include_router(events.router)
 app.include_router(push.router)
 app.include_router(oauth.router)
 app.include_router(admin.router)
+app.include_router(leaderboard.router)
 app.include_router(live.router)
 
 
@@ -109,21 +110,3 @@ def manifest():
     return FileResponse(WEB_DIR / "manifest.webmanifest", media_type="application/manifest+json")
 
 
-@app.get("/groups/{group_id}/leaderboard", response_model=list[MemberOut], tags=["groups"])
-def leaderboard(
-    group_id: str,
-    db: Session = Depends(get_db),
-    user: User = Depends(current_user),
-):
-    """Standings by credit balance — the season scoreboard."""
-    require_membership(db, group_id, user)
-    rows = db.execute(
-        select(Membership, User)
-        .join(User, User.id == Membership.user_id)
-        .where(Membership.group_id == group_id)
-        .order_by(Membership.balance.desc())
-    ).all()
-    return [
-        MemberOut(membership_id=m.id, user_id=u.id, name=u.name, balance=m.balance)
-        for m, u in rows
-    ]

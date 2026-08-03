@@ -40,7 +40,8 @@ test.describe("core flows", () => {
     await page.getByRole("button", { name: "YES", exact: true }).first().click();
     // amount stepper: +100 chip a couple times
     await page.getByRole("button", { name: "+100" }).click();
-    await page.getByRole("button", { name: /^Bet YES$/ }).click();
+    // slide-to-confirm: Enter activates it for keyboard/testing
+    await page.getByRole("slider", { name: /Slide to bet/ }).press("Enter");
 
     // the bet shows up (nickname/name + YES) and the pot is no longer 0
     await expect(page.getByText(/pot 100/).first()).toBeVisible();

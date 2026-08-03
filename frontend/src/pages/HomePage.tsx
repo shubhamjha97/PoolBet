@@ -249,13 +249,18 @@ export function HomePage() {
                     openGroup(g.id);
                   }
                 }}
-                className="tactile flex cursor-pointer items-center justify-between p-4 active:scale-[0.98]"
+                className="tactile flex cursor-pointer items-center justify-between p-4 transition-colors hover:border-primary/40 active:scale-[0.98]"
               >
-                <div className="min-w-0">
-                  <div className="truncate font-semibold">{g.name}</div>
-                  <div className="mt-0.5 truncate text-sm text-muted-foreground">
-                    {g.members.length} {g.members.length === 1 ? "member" : "members"} · code{" "}
-                    {g.invite_code}
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-yes to-no text-base font-bold text-black shadow-[0_3px_14px_-3px_hsl(var(--no)/0.5)]">
+                    {g.name.trim().slice(0, 1).toUpperCase() || "•"}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold">{g.name}</div>
+                    <div className="mt-0.5 truncate text-sm text-muted-foreground">
+                      {g.members.length} {g.members.length === 1 ? "member" : "members"} · code{" "}
+                      {g.invite_code}
+                    </div>
                   </div>
                 </div>
                 {me && (

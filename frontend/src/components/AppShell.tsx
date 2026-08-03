@@ -1,13 +1,11 @@
 import { Outlet, Link } from "react-router-dom";
-import { Moon, Sun, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/lib/theme";
 import { useAuth } from "@/lib/auth";
 import { haptic } from "@/lib/haptics";
 import { InstallButton } from "./InstallButton";
 
 export function AppShell() {
-  const { theme, toggle } = useTheme();
   const { user, isAdmin, logout } = useAuth();
 
   return (
@@ -29,15 +27,6 @@ export function AppShell() {
               </Button>
             )}
             <InstallButton />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="tap-target tactile"
-              onClick={() => { haptic("select"); toggle(); }}
-              aria-label="Toggle theme"
-            >
-              {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </Button>
             {user && (
               <Button
                 variant="ghost"
@@ -53,7 +42,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-[820px] pb-28 pt-5 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
+      <main className="relative z-10 mx-auto w-full max-w-[820px] px-4 pb-28 pt-5">
         <Outlet />
       </main>
     </div>

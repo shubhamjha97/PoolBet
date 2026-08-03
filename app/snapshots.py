@@ -129,8 +129,14 @@ def rollback_to(db, snapshot_id: str) -> dict:
     return restored
 
 
+# Telemetry/noise events are logged but must NOT create rollback snapshots — they
+# fire constantly (session pings, app opens) and would flood out the meaningful
+# snapshots (bets, settlements). They change no domain state anyway.
+_NO_SNAPSHOT_EVENTS = {"app_open", "session_ping", "user_login"}
+
+
 # ---------------------------------------------------------------------------
-# Auto-snapshot: after any commit that appended Event rows, persist a snapshot.
+# Auto-snapshot: after any commit that appended DOMAIN Event rows, persist a snapshot.
 # ---------------------------------------------------------------------------
 @event.listens_for(SessionLocal, "after_flush")
 def _track_new_events(session, flush_context):
@@ -145,7 +151,7 @@ def _track_new_events(session, flush_context):
             "payload": o.payload or {},
         }
         for o in session.new
-        if isinstance(o, Event)
+        if isinstance(o, Event) and o.type not in _NO_SNAPSHOT_EVENTS
     ]
     if new:
         session.info.setdefault("_new_events", []).extend(new)

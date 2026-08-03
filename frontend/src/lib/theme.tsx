@@ -1,32 +1,15 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
-type Theme = "dark" | "light";
-interface Ctx { theme: Theme; setTheme: (t: Theme) => void; toggle: () => void; }
-
-const ThemeContext = createContext<Ctx>({ theme: "dark", setTheme: () => {}, toggle: () => {} });
-
+// The app is OLED-dark by design (Robinhood/Linear fintech aesthetic). Locked to
+// dark for now — light mode was a distraction from the vision. (A proper light
+// theme can be reintroduced later if wanted.)
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(
-    () => (localStorage.getItem("pb_theme") as Theme) || "dark",
-  );
-
   useEffect(() => {
     const el = document.documentElement;
-    el.classList.toggle("dark", theme === "dark");
-    el.style.colorScheme = theme;
-    localStorage.setItem("pb_theme", theme);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", theme === "dark" ? "#000000" : "#ffffff");
-  }, [theme]);
-
-  return (
-    <ThemeContext.Provider
-      value={{ theme, setTheme: setThemeState, toggle: () => setThemeState((p) => (p === "dark" ? "light" : "dark")) }}
-    >
-      {children}
-    </ThemeContext.Provider>
-  );
+    el.classList.add("dark");
+    el.style.colorScheme = "dark";
+    localStorage.setItem("pb_theme", "dark");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#000000");
+  }, []);
+  return <>{children}</>;
 }
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useTheme = () => useContext(ThemeContext);

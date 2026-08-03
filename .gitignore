@@ -17,3 +17,5 @@ frontend/dist/
 # OS / logs
 .DS_Store
 *.log
+playwright + screenshots
+frontend/shoot.mjs

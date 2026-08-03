@@ -53,4 +53,13 @@ test.describe("core flows", () => {
     await page.goto("/");
     await expect(page.getByText(gname)).toBeVisible();
   });
+
+  test("post a comment in the live feed (streams back via SSE)", async ({ page }) => {
+    await signup(page, rand("E2E-"));
+    await createGroup(page, rand("Grp-"));
+    const msg = `hello-${rand("")}`;
+    await page.getByPlaceholder("Add a comment…").fill(msg);
+    await page.getByRole("button", { name: "Send comment" }).click();
+    await expect(page.getByText(new RegExp(msg))).toBeVisible();
+  });
 });

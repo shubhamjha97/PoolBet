@@ -27,6 +27,6 @@ test.describe("admin", () => {
     await dialog.getByRole("button", { name: /Roll back/ }).click();
 
     // success toast, and the dialog closes
-    await expect(page.getByText("Rolled back")).toBeVisible();
+    await expect(page.getByText("Rolled back", { exact: true })).toBeVisible(); // the toast (not "State rolled back" log lines)
   });
 });

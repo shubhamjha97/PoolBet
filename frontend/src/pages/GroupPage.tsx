@@ -88,7 +88,7 @@ export function GroupPage() {
         </div>
         <div className="mt-3 flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">invite code</span>
-          <span className="rounded-md border bg-secondary px-2.5 py-1 font-mono tracking-widest text-primary">{group.invite_code}</span>
+          <span data-testid="invite-code" className="rounded-md border bg-secondary px-2.5 py-1 font-mono tracking-widest text-primary">{group.invite_code}</span>
           <Button size="sm" className="tactile ml-auto active:scale-95" onClick={() => { setShareOpen(true); haptic("select"); }}><Share2 className="size-3.5" /> Share</Button>
         </div>
       </div>
@@ -105,7 +105,7 @@ export function GroupPage() {
         </div>
       )}
 
-      <LiveFeed events={liveEvents} />
+      <LiveFeed events={liveEvents} groupId={id} />
 
       <Tabs defaultValue="markets">
         <TabsList className="w-full">

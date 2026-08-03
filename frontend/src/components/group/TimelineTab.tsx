@@ -11,6 +11,7 @@ function describe(e: TimelineEvent) {
   const who = s(e.actor_name) || "Someone";
   const mq = p.market_question ? ` — ${s(p.market_question)}` : "";
   switch (e.type) {
+    case "comment": return <><b>{who}</b>: {s(p.text)}</>;
     case "bet_placed": {
       const name = p.anonymous ? s(p.nickname_or_name) || "An anonymous bettor" : who;
       const side = s(p.side);

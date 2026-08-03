@@ -23,11 +23,13 @@ from ..models import (
 from ..schemas import (
     AccessRequestOut,
     AccessRequestStatusOut,
+    CommentIn,
     GroupCreate,
     GroupJoin,
     GroupOut,
     GroupPreview,
     MemberOut,
+    MessageOut,
     PnlPoint,
     PnlSeries,
     TimelineItem,
@@ -352,6 +354,26 @@ def buy_in(
     db.commit()
     db.refresh(group)
     return _serialize_group(db, group)
+
+
+# ---------- comments (live banter feed) ----------
+@router.post("/{group_id}/comments", response_model=MessageOut)
+def post_comment(
+    group_id: str,
+    body: CommentIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(current_user),
+):
+    """Post a chat comment to the group's live feed — a 'comment' event that fans
+    out over SSE and shows in the timeline. Members only."""
+    group = db.get(Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="group not found")
+    require_membership(db, group_id, user)
+    record_event(db, "comment", actor_user_id=user.id, group_id=group_id,
+                 actor_name=user.name, text=body.text)
+    db.commit()
+    return MessageOut(detail="posted")
 
 
 # ---------- group timeline (commit log) ----------

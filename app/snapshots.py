@@ -132,7 +132,7 @@ def rollback_to(db, snapshot_id: str) -> dict:
 # Telemetry/noise events are logged but must NOT create rollback snapshots — they
 # fire constantly (session pings, app opens) and would flood out the meaningful
 # snapshots (bets, settlements). They change no domain state anyway.
-_NO_SNAPSHOT_EVENTS = {"app_open", "session_ping", "user_login"}
+_NO_SNAPSHOT_EVENTS = {"app_open", "session_ping", "user_login", "comment"}
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ def _track_new_events(session, flush_context):
             "payload": o.payload or {},
         }
         for o in session.new
-        if isinstance(o, Event) and o.type not in _NO_SNAPSHOT_EVENTS
+        if isinstance(o, Event)  # track ALL events for SSE/Redpanda; snapshotting is filtered below
     ]
     if new:
         session.info.setdefault("_new_events", []).extend(new)
@@ -162,14 +162,18 @@ def _snapshot_after_commit(session):
     pending = session.info.pop("_new_events", None)
     if not pending:
         return
-    last = pending[-1]
-    # Snapshot the just-committed state in a fresh session so we dump durable rows.
-    with SessionLocal() as s2:
-        try:
-            snapshot_state(s2, label=f"auto:{last['type']}", after_event_id=last["id"])
-            s2.commit()
-        except Exception:
-            s2.rollback()
+
+    # Snapshot only for state-changing events (telemetry/comments don't create
+    # rollback points), but still stream ALL events below.
+    worthy = [ev for ev in pending if ev["type"] not in _NO_SNAPSHOT_EVENTS]
+    if worthy:
+        last = worthy[-1]
+        with SessionLocal() as s2:
+            try:
+                snapshot_state(s2, label=f"auto:{last['type']}", after_event_id=last["id"])
+                s2.commit()
+            except Exception:
+                s2.rollback()
 
     # Fan out to live SSE subscribers (best-effort; never affects the request).
     try:

@@ -107,6 +107,10 @@ class DisputeIn(BaseModel):
     reason: CleanStr = Field(min_length=3, max_length=280)
 
 
+class CommentIn(BaseModel):
+    text: CleanStr = Field(min_length=1, max_length=500)
+
+
 class VoteIn(BaseModel):
     choice: str = Field(pattern="^(YES|NO|VOID)$")
 

@@ -160,6 +160,23 @@ def test_my_groups_lists_only_my_memberships():
     _ = g1  # created for isolation
 
 
+def test_comment_posts_to_feed_sanitized_and_members_only():
+    a = _user("CommA")
+    g = client.post("/groups", json={"name": "CommG"}, headers=_auth(a["api_token"])).json()
+
+    r = client.post(f"/groups/{g['id']}/comments", json={"text": "gg wp <script>x</script>"}, headers=_auth(a["api_token"]))
+    assert r.status_code == 200
+
+    tl = client.get(f"/groups/{g['id']}/timeline", headers=_auth(a["api_token"])).json()
+    comments = [e for e in tl if e["type"] == "comment"]
+    assert comments and comments[0]["payload"]["text"] == "gg wp x"  # tags stripped
+    assert comments[0]["actor_name"] == "CommA"
+
+    # non-member can't comment
+    b = _user("CommB")
+    assert client.post(f"/groups/{g['id']}/comments", json={"text": "hi"}, headers=_auth(b["api_token"])).status_code == 403
+
+
 def test_non_member_cannot_view_group():
     owner = _user("Owner")
     outsider = _user("Outsider")

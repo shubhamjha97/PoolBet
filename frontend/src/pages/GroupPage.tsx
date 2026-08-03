@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Copy, Link2, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Copy, Link2, Plus, Loader2, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import type { AccessRequest, Group, Market, TimelineEvent } from "@/lib/types";
@@ -14,6 +14,7 @@ import { MarketsTab } from "@/components/market/MarketsTab";
 import { StatsTab } from "@/components/group/StatsTab";
 import { TimelineTab } from "@/components/group/TimelineTab";
 import { LiveFeed } from "@/components/group/LiveFeed";
+import { QrDialog } from "@/components/group/QrDialog";
 
 function rememberGroup(id: string) {
   try {
@@ -30,6 +31,7 @@ export function GroupPage() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [qrOpen, setQrOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -86,6 +88,7 @@ export function GroupPage() {
           <span className="rounded-md border bg-secondary px-2.5 py-1 font-mono tracking-widest text-primary">{group.invite_code}</span>
           <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(group.invite_code, "Code copied")}><Copy className="size-3.5" /> Code</Button>
           <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(`${location.origin}/#/group/${id}`, "Link copied")}><Link2 className="size-3.5" /> Link</Button>
+          <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => { setQrOpen(true); haptic("select"); }}><QrCode className="size-3.5" /> QR</Button>
         </div>
       </div>
 
@@ -119,6 +122,8 @@ export function GroupPage() {
           <TimelineTab groupId={id} />
         </TabsContent>
       </Tabs>
+
+      <QrDialog open={qrOpen} onOpenChange={setQrOpen} url={`${location.origin}/#/group/${id}`} label={group.name} />
     </div>
   );
 }

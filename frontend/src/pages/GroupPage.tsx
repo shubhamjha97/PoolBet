@@ -172,7 +172,7 @@ export function GroupPage() {
           <StatsTab group={group} markets={markets} />
         </TabsContent>
         <TabsContent value="settle" className="mt-4">
-          <SettleTab groupId={id} />
+          <SettleTab groupId={id} groupName={group.name} />
         </TabsContent>
         <TabsContent value="timeline" className="mt-4">
           <TimelineTab groupId={id} />

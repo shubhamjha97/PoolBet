@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { fmt } from "@/lib/format";
+import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, Share2 } from "lucide-react";
 
 interface NetEntry {
   user_id: string;
@@ -33,11 +36,27 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function SettleTab({ groupId }: { groupId: string }) {
+export function SettleTab({ groupId, groupName }: { groupId: string; groupName?: string }) {
   const { user } = useAuth();
   const [data, setData] = useState<Settlement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  async function shareSettleUp() {
+    if (!data) return;
+    haptic("select");
+    const standings = [...data.net].sort((a, b) => b.net - a.net)
+      .map((n) => `  ${n.name}: ${n.net >= 0 ? "+" : ""}${fmt(n.net)}`).join("\n");
+    const transfers = data.transfers.length
+      ? data.transfers.map((t) => `  ${t.from_name} → ${t.to_name}: ${fmt(t.amount)}`).join("\n")
+      : "  Everyone's even 🎉";
+    const text = `🧾 ${groupName ?? "PoolBet"} — settle up\n\nStandings:\n${standings}\n\nWho pays who:\n${transfers}`;
+    try {
+      if (navigator.share) { await navigator.share({ title: "PoolBet settle-up", text }); return; }
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied settle-up to clipboard");
+    } catch { /* user cancelled share */ }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -127,6 +146,9 @@ export function SettleTab({ groupId }: { groupId: string }) {
             ))}
           </div>
         )}
+        <Button variant="outline" className="tactile mt-3 w-full active:scale-95" onClick={shareSettleUp}>
+          <Share2 className="size-4" /> Share settle-up
+        </Button>
       </section>
 
       {data.house_take > 0 && (

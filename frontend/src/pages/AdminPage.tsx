@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { AdminEvent, Snapshot } from "@/lib/types";
 import { count, fmt, timeAgo } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -77,21 +78,47 @@ function line(e: AdminEvent) {
   }
 }
 
+// Format a Date as a `datetime-local` input value in the viewer's local time.
+function toLocalInput(d: Date) {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+const RANGES = [
+  { k: "15m", label: "15m", ms: 15 * 60_000 },
+  { k: "1h", label: "1h", ms: 60 * 60_000 },
+  { k: "3h", label: "3h", ms: 3 * 60 * 60_000 },
+  { k: "1d", label: "1d", ms: 24 * 60 * 60_000 },
+  { k: "7d", label: "7d", ms: 7 * 24 * 60 * 60_000 },
+  { k: "all", label: "All", ms: 0 },
+] as const;
+
 export function AdminPage() {
   const [snaps, setSnaps] = useState<Snapshot[]>([]);
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [confirm, setConfirm] = useState<Snapshot | null>(null);
+  const [selected, setSelected] = useState<AdminEvent | null>(null);
   const [busy, setBusy] = useState(false);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [rake, setRake] = useState(0); // fraction, e.g. 0.01 = 1%
   const [savingRake, setSavingRake] = useState(false);
 
-  // Commit-log pagination + datetime filtering.
+  // Commit-log pagination + datetime filtering. Defaults to the last 15 minutes.
   const PAGE_SIZE = 25;
   const [page, setPage] = useState(0);
-  const [start, setStart] = useState(""); // datetime-local value, e.g. 2026-08-02T14:30
+  const [range, setRange] = useState<string>("15m");
+  const [start, setStart] = useState(() => toLocalInput(new Date(Date.now() - 15 * 60_000)));
   const [end, setEnd] = useState("");
   const [hasMore, setHasMore] = useState(false);
+
+  const applyRange = (k: string) => {
+    const r = RANGES.find((x) => x.k === k)!;
+    setRange(k);
+    setPage(0);
+    setEnd("");
+    setStart(r.ms ? toLocalInput(new Date(Date.now() - r.ms)) : "");
+    haptic("select");
+  };
 
   const load = useCallback(async () => {
     try { setSnaps(await api<Snapshot[]>("GET", "/admin/snapshots")); } catch { setSnaps([]); }
@@ -234,37 +261,53 @@ export function AdminPage() {
       <div>
         <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Commit log</div>
 
-        {/* datetime range filter */}
+        {/* quick range chips */}
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {RANGES.map((r) => (
+            <button
+              key={r.k}
+              onClick={() => applyRange(r.k)}
+              className={cn(
+                "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                range === r.k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+
+        {/* exact datetime range (calendar picker) */}
         <div className="mb-3 flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
             From
             <Input type="datetime-local" value={start} className="h-8 w-[13.5rem]"
-              onChange={(e) => { setStart(e.target.value); setPage(0); }} />
+              onChange={(e) => { setStart(e.target.value); setRange("custom"); setPage(0); }} />
           </label>
           <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
             To
             <Input type="datetime-local" value={end} className="h-8 w-[13.5rem]"
-              onChange={(e) => { setEnd(e.target.value); setPage(0); }} />
+              onChange={(e) => { setEnd(e.target.value); setRange("custom"); setPage(0); }} />
           </label>
-          {(start || end) && (
-            <Button variant="outline" size="sm" className="tactile active:scale-95"
-              onClick={() => { setStart(""); setEnd(""); setPage(0); }}>Clear</Button>
-          )}
         </div>
 
         {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{start || end ? "No events in this range." : "Empty."}</p>
+          <p className="text-sm text-muted-foreground">No events in this range.</p>
         ) : (
           <div className="space-y-0">
             {events.map((e, i) => (
-              <div key={e.id} className="relative flex gap-3 pb-3">
+              <button
+                key={e.id}
+                onClick={() => { haptic("select"); setSelected(e); }}
+                className="relative flex w-full gap-3 pb-3 text-left"
+              >
                 {i < events.length - 1 && <span className="absolute left-[4px] top-3 h-full w-px bg-border" />}
                 <span className="relative z-10 mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm">{line(e)}</div>
-                  <div className="text-xs text-muted-foreground">{timeAgo(e.ts)}</div>
+                  <div className="text-xs text-muted-foreground">{timeAgo(e.ts)} · tap for details</div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -289,6 +332,27 @@ export function AdminPage() {
             <Button variant="outline" onClick={() => setConfirm(null)}>Cancel</Button>
             <Button variant="destructive" disabled={busy} onClick={rollback}>Roll back</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selected} onOpenChange={(v) => !v && setSelected(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-mono">{selected?.type}</DialogTitle></DialogHeader>
+          {selected && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
+                <span className="text-muted-foreground">when</span><span className="font-mono">{new Date(selected.ts).toLocaleString()}</span>
+                <span className="text-muted-foreground">actor</span><span>{selected.actor_name ?? "—"}</span>
+                <span className="text-muted-foreground">event id</span><span className="truncate font-mono text-xs">{selected.id}</span>
+                {selected.group_id && (<><span className="text-muted-foreground">group</span><span className="truncate font-mono text-xs">{selected.group_id}</span></>)}
+                {selected.market_id && (<><span className="text-muted-foreground">market</span><span className="truncate font-mono text-xs">{selected.market_id}</span></>)}
+              </div>
+              <div>
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Payload</div>
+                <pre className="max-h-72 overflow-auto rounded-lg border bg-secondary/50 p-3 font-mono text-xs">{JSON.stringify(selected.payload, null, 2)}</pre>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

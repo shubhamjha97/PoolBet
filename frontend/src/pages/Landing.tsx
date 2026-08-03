@@ -19,22 +19,27 @@ const GoogleIcon = () => (
 );
 
 function Hero() {
-  // An elegant token: gradient coin with a slowly-rotating specular sheen, a
-  // breathing glow, and a gentle float — GPU-only (transform/opacity), reduced
-  // to static under prefers-reduced-motion (see index.css).
+  // Abstract, prominent "pool": two gradient orbs slowly orbiting a glass core,
+  // wrapped in layered glow + shadow. GPU-only (transform/opacity); reduced to
+  // static under prefers-reduced-motion (see index.css).
   return (
-    <div className="mx-auto grid size-36 place-items-center [animation:pb-float_7s_ease-in-out_infinite]" aria-hidden>
-      <div className="relative size-28">
-        <div className="absolute -inset-3 rounded-full bg-gradient-to-br from-yes/40 to-no/40 blur-2xl [animation:pb-breathe_6s_ease-in-out_infinite]" />
-        <div className="relative size-full rounded-full bg-gradient-to-br from-yes to-no shadow-[0_12px_44px_-10px_hsl(var(--no)/0.55)]">
-          <div className="absolute inset-0 overflow-hidden rounded-full">
-            <div className="absolute -inset-1/2 bg-[conic-gradient(from_0deg,transparent_0deg,rgba(255,255,255,0.4)_36deg,transparent_90deg)] [animation:spin_9s_linear_infinite]" />
-          </div>
-          <div className="absolute inset-[9px] grid place-items-center rounded-full bg-background/85 backdrop-blur-sm">
-            <span className="bg-gradient-to-br from-yes to-no bg-clip-text text-[40px] font-black leading-none text-transparent">P</span>
-          </div>
-        </div>
+    <div className="relative mx-auto grid size-44 place-items-center" aria-hidden>
+      {/* layered breathing glow */}
+      <div className="absolute size-40 rounded-full bg-yes/25 blur-3xl [animation:pb-breathe_7s_ease-in-out_infinite]" />
+      <div className="absolute size-40 rounded-full bg-no/25 blur-3xl [animation:pb-breathe_7s_ease-in-out_infinite_reverse]" />
+
+      {/* orbiting gradient orbs */}
+      <div className="absolute size-full [animation:spin_20s_linear_infinite]">
+        <div className="absolute left-1/2 top-1 size-[4.5rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-yes to-emerald-300 shadow-[0_18px_50px_-8px_hsl(var(--yes)/0.65)]" />
+        <div className="absolute bottom-1 left-1/2 size-[4.5rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-no to-pink-300 shadow-[0_18px_50px_-8px_hsl(var(--no)/0.65)]" />
       </div>
+
+      {/* concentric ripple rings */}
+      <div className="absolute size-28 rounded-full ring-1 ring-white/10 [animation:pb-breathe_5s_ease-in-out_infinite]" />
+      <div className="absolute size-36 rounded-full ring-1 ring-white/5" />
+
+      {/* floating glass core */}
+      <div className="relative size-[4.5rem] rounded-full bg-background/60 shadow-[inset_0_1px_12px_rgba(255,255,255,0.12),0_10px_30px_-8px_rgba(0,0,0,0.6)] ring-1 ring-white/10 backdrop-blur-xl [animation:pb-float_6s_ease-in-out_infinite]" />
     </div>
   );
 }

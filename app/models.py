@@ -147,6 +147,9 @@ class Market(Base):
     evidence_url: Mapped[str | None] = mapped_column(String, nullable=True)  # /static/uploads/<file> proof image
     closes_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[MarketStatus] = mapped_column(String, nullable=False, default=MarketStatus.OPEN)
+    # None -> binary YES/NO market (default). A list of >=2 labels -> N-way
+    # "multiple choice" market; bets carry Bet.outcome and settlement is N-way.
+    outcomes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     proposed_outcome: Mapped[Outcome | None] = mapped_column(String, nullable=True)
     proposed_fraction: Mapped[Decimal | None] = mapped_column(Numeric(6, 4), nullable=True)  # YES share 0..1 for SCALAR
@@ -169,7 +172,8 @@ class Bet(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     market_id: Mapped[str] = mapped_column(ForeignKey("markets.id"), nullable=False, index=True)
     membership_id: Mapped[str] = mapped_column(ForeignKey("memberships.id"), nullable=False, index=True)
-    side: Mapped[Side] = mapped_column(String, nullable=False)
+    side: Mapped[Side | None] = mapped_column(String, nullable=True)  # YES/NO for binary markets
+    outcome: Mapped[str | None] = mapped_column(String, nullable=True)  # chosen label for N-way markets
     amount: Mapped[Decimal] = mapped_column(Credits, nullable=False)
     payout: Mapped[Decimal | None] = mapped_column(Credits, nullable=True)  # set at settlement
     anonymous: Mapped[bool] = mapped_column(nullable=False, default=False)

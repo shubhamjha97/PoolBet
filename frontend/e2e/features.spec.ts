@@ -16,22 +16,26 @@ test("home shows the edge-to-edge portfolio chart with range pills", async ({ pa
   await expect(page.locator('svg[viewBox="0 0 1000 300"] path')).toBeVisible();
 });
 
-test("commit log paginates and filters by date", async ({ page }) => {
+test("commit log paginates, filters by range/date, and opens event details", async ({ page }) => {
   await login(page, "Ava");
   await page.goto("/#/admin");
   await expect(page.getByText("Commit log", { exact: true })).toBeVisible();
 
-  // pagination: seeded log has >1 page
+  // "All" range → full seeded log has >1 page
+  await page.getByRole("button", { name: "All", exact: true }).click();
   const older = page.getByRole("button", { name: "Older" });
   await expect(older).toBeVisible();
   await older.click();
   await expect(page.getByText("page 2")).toBeVisible();
 
-  // date filter: an end far in the past yields no rows
+  // exact date filter (calendar): an end far in the past yields no rows
   await page.getByLabel("To", { exact: true }).fill("2020-01-01T00:00");
   await expect(page.getByText("No events in this range.")).toBeVisible();
-  await page.getByRole("button", { name: "Clear" }).click();
-  await expect(page.getByText("No events in this range.")).toBeHidden();
+
+  // back to a populated range, then open an event's detail dialog
+  await page.getByRole("button", { name: "All", exact: true }).click();
+  await page.getByText(/tap for details/).first().click();
+  await expect(page.getByText("Payload")).toBeVisible();
 });
 
 test("group leaderboard (Ranks) tab renders ranked standings", async ({ page }) => {

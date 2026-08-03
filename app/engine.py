@@ -120,3 +120,39 @@ def settle(
     _distribute(payouts, [s for s in stakes if s.side == "YES"], odds.yes_pool, yes_target)
     _distribute(payouts, [s for s in stakes if s.side == "NO"], odds.no_pool, no_target)
     return payouts
+
+
+def outcome_pools(stakes: list[StakeIn]) -> dict[str, Decimal]:
+    """Total staked on each outcome label (for N-way markets; `side` holds the label)."""
+    pools: dict[str, Decimal] = {}
+    for s in stakes:
+        pools[s.side] = pools.get(s.side, Decimal("0")) + s.amount
+    return pools
+
+
+def settle_multi(
+    stakes: list[StakeIn],
+    winning: str,
+    rake: Decimal = Decimal("0"),
+) -> dict[str, Decimal]:
+    """N-way parimutuel: everyone who staked on `winning` splits the entire
+    (post-rake) pot pro-rata to their stake; everyone else gets nothing. `side`
+    on each StakeIn carries the outcome label.
+
+    Refund-all guards (rake never applies): no stakes, no one on the winning
+    outcome, or everyone on the winning outcome (no counterparty).
+
+    Conservation: sum(payouts) == total pot minus the rake actually taken.
+    """
+    total = sum((s.amount for s in stakes), Decimal("0"))
+    winners = [s for s in stakes if s.side == winning]
+    win_pool = sum((s.amount for s in winners), Decimal("0"))
+    if total == 0 or win_pool == 0 or win_pool == total:
+        return _refund_all(stakes)
+
+    rake_amount = (total * rake).quantize(CENT, rounding=ROUND_DOWN)
+    distributable = total - rake_amount
+
+    payouts: dict[str, Decimal] = {s.bet_id: Decimal("0") for s in stakes}
+    _distribute(payouts, winners, win_pool, distributable)
+    return payouts

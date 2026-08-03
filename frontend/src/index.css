@@ -29,29 +29,29 @@
     --radius: 0.9rem;
   }
 
-  /* Dark theme — OLED black + neon (the star) */
+  /* Dark theme — rich charcoal canvas + solid surfaces (fintech look) */
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 80 8% 96%;
-    --card: 240 5% 4%;
-    --card-foreground: 80 8% 96%;
-    --popover: 240 6% 5%;
-    --popover-foreground: 80 8% 96%;
-    --primary: 142 71% 45%;              /* emerald-500 */
-    --primary-foreground: 142 80% 6%;
-    --secondary: 240 5% 9%;
-    --secondary-foreground: 80 8% 96%;
-    --muted: 240 5% 9%;
-    --muted-foreground: 240 4% 55%;      /* ~zinc-500 */
-    --accent: 240 5% 11%;
-    --accent-foreground: 142 71% 50%;
+    --background: 220 15% 6%;            /* #0D0F12 charcoal (not pure black) */
+    --foreground: 210 16% 97%;
+    --card: 220 13% 11%;                 /* #16181C elevated surface */
+    --card-foreground: 210 16% 97%;
+    --popover: 220 14% 9%;
+    --popover-foreground: 210 16% 97%;
+    --primary: 152 74% 44%;              /* crisp emerald — reserved for gains/actions */
+    --primary-foreground: 152 85% 6%;
+    --secondary: 222 12% 18%;            /* #2A2E37 neutral grey — secondary controls */
+    --secondary-foreground: 210 16% 97%;
+    --muted: 220 12% 14%;
+    --muted-foreground: 220 9% 62%;      /* #8A8F9B dimmed meta-text */
+    --accent: 220 12% 16%;
+    --accent-foreground: 152 74% 50%;
     --destructive: 330 81% 60%;          /* pink-500 */
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 100% / 0.1;           /* white/10 */
-    --input: 0 0% 100% / 0.14;
-    --ring: 142 71% 45%;
-    --yes: 142 71% 45%;                  /* emerald-500 */
-    --no: 330 81% 60%;                   /* pink-500 */
+    --border: 0 0% 100% / 0.055;         /* very faint — rely on surface contrast, not strokes */
+    --input: 0 0% 100% / 0.08;
+    --ring: 152 74% 44%;
+    --yes: 152 74% 46%;                  /* emerald — gains / YES / wins */
+    --no: 330 81% 62%;                   /* pink-500 */
   }
 }
 
@@ -69,6 +69,16 @@
   }
   input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
   ::selection { @apply bg-primary/25; }
+
+  /* Kill the browser autofill yellow/white overlay on dark inputs. */
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px hsl(var(--secondary)) inset !important;
+    -webkit-text-fill-color: hsl(var(--foreground)) !important;
+    caret-color: hsl(var(--foreground));
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
 
 @layer components {

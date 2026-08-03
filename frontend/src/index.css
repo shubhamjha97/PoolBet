@@ -11,21 +11,21 @@
     --card-foreground: 0 0% 6%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 6%;
-    --primary: 156 90% 30%;
+    --primary: 142 71% 38%;
     --primary-foreground: 0 0% 100%;
     --secondary: 90 12% 96%;
     --secondary-foreground: 0 0% 10%;
     --muted: 90 10% 95%;
     --muted-foreground: 0 0% 40%;
-    --accent: 156 40% 94%;
-    --accent-foreground: 156 90% 24%;
-    --destructive: 336 80% 46%;
+    --accent: 142 40% 94%;
+    --accent-foreground: 142 71% 30%;
+    --destructive: 330 75% 50%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 90%;
     --input: 0 0% 88%;
-    --ring: 156 90% 30%;
-    --yes: 156 90% 30%;
-    --no: 336 80% 46%;
+    --ring: 142 71% 38%;
+    --yes: 142 71% 38%;
+    --no: 330 75% 50%;
     --radius: 0.9rem;
   }
 
@@ -37,21 +37,21 @@
     --card-foreground: 80 8% 96%;
     --popover: 240 6% 5%;
     --popover-foreground: 80 8% 96%;
-    --primary: 156 100% 50%;
-    --primary-foreground: 156 90% 6%;
-    --secondary: 240 5% 8%;
+    --primary: 142 71% 45%;              /* emerald-500 */
+    --primary-foreground: 142 80% 6%;
+    --secondary: 240 5% 9%;
     --secondary-foreground: 80 8% 96%;
-    --muted: 240 5% 8%;
-    --muted-foreground: 100 3% 60%;
-    --accent: 240 5% 10%;
-    --accent-foreground: 156 100% 50%;
-    --destructive: 336 100% 59%;
+    --muted: 240 5% 9%;
+    --muted-foreground: 240 4% 55%;      /* ~zinc-500 */
+    --accent: 240 5% 11%;
+    --accent-foreground: 142 71% 50%;
+    --destructive: 330 81% 60%;          /* pink-500 */
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 13%;
-    --input: 0 0% 15%;
-    --ring: 156 100% 50%;
-    --yes: 156 100% 50%;
-    --no: 336 100% 59%;
+    --border: 0 0% 100% / 0.1;           /* white/10 */
+    --input: 0 0% 100% / 0.14;
+    --ring: 142 71% 45%;
+    --yes: 142 71% 45%;                  /* emerald-500 */
+    --no: 330 81% 60%;                   /* pink-500 */
   }
 }
 

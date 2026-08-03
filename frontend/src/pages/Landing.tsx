@@ -66,7 +66,7 @@ export function Landing() {
   };
 
   return (
-    <div className="ambient-grid relative flex min-h-dvh items-center justify-center overflow-hidden px-6 pt-safe pb-safe">
+    <div className="relative z-10 flex min-h-dvh items-center justify-center overflow-hidden px-6 pt-safe pb-safe">
       {/* dramatic ambient blobs */}
       <div className="pointer-events-none absolute -left-[8vmax] -top-[14vmax] size-[46vmax] rounded-full bg-yes/20 blur-[80px]" />
       <div className="pointer-events-none absolute -bottom-[16vmax] -right-[10vmax] size-[46vmax] rounded-full bg-no/20 blur-[80px]" />

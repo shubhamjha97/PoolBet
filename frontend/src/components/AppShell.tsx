@@ -11,7 +11,7 @@ export function AppShell() {
   const { user, isAdmin, logout } = useAuth();
 
   return (
-    <div className="ambient-grid min-h-dvh">
+    <div className="relative z-10 min-h-dvh">
       <header className="glass sticky top-0 z-30 border-b border-border/60 pt-safe px-safe">
         <div className="mx-auto flex h-14 max-w-[820px] items-center justify-between px-4">
           <Link

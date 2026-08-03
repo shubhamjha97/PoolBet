@@ -18,40 +18,29 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 
 const STATUS_STYLES: Record<string, string> = {
-  OPEN: "text-primary border-primary/40",
-  CLOSED: "text-amber-400 border-amber-400/40",
-  RESOLVING: "text-amber-400 border-amber-400/40",
-  DISPUTED: "text-no border-no/40",
-  RESOLVED: "text-muted-foreground border-border",
+  OPEN: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  CLOSED: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  RESOLVING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  DISPUTED: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+  RESOLVED: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
 };
 
-/** Fluid gradient YES/NO bar that flows continuously and pulses on new volume. */
+/** YES/NO bar with spring-physics width + neon glow; pulses on new volume. */
 function AnimatedOddsBar({ yesPct, total }: { yesPct: number; total: number }) {
   const controls = useAnimationControls();
   const prev = useRef(total);
   useEffect(() => {
     if (total > prev.current) {
-      controls.start({ scale: [1, 1.05, 1], transition: { duration: 0.55, ease: "easeOut" } });
+      controls.start({ scale: [1, 1.04, 1], transition: { duration: 0.5, ease: "easeOut" } });
     }
     prev.current = total;
   }, [total, controls]);
 
+  const spring = { type: "spring" as const, stiffness: 120, damping: 20 };
   return (
-    <motion.div animate={controls} className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-secondary">
-      <motion.div className="relative h-full overflow-hidden rounded-full" animate={{ width: `${yesPct}%` }} initial={false} transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}>
-        <motion.div
-          className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--yes))_0%,#7dffcf_50%,hsl(var(--yes))_100%)] bg-[length:200%_100%] shadow-[0_0_12px_hsl(var(--yes)/0.6)]"
-          animate={{ backgroundPosition: ["0% 0%", "200% 0%"] }}
-          transition={{ duration: 2.6, repeat: Infinity, ease: "linear" }}
-        />
-      </motion.div>
-      <motion.div className="relative h-full overflow-hidden rounded-full" animate={{ width: `${100 - yesPct}%` }} initial={false} transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}>
-        <motion.div
-          className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--no))_0%,#ff86bd_50%,hsl(var(--no))_100%)] bg-[length:200%_100%] shadow-[0_0_12px_hsl(var(--no)/0.6)]"
-          animate={{ backgroundPosition: ["0% 0%", "200% 0%"] }}
-          transition={{ duration: 2.6, repeat: Infinity, ease: "linear" }}
-        />
-      </motion.div>
+    <motion.div animate={controls} className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-zinc-800/80 p-0.5">
+      <motion.div className="h-full rounded-l-full bg-yes shadow-[0_0_12px_rgba(34,197,94,0.45)]" animate={{ width: `${yesPct}%` }} initial={false} transition={spring} />
+      <motion.div className="h-full rounded-r-full bg-no shadow-[0_0_12px_rgba(236,72,153,0.45)]" animate={{ width: `${100 - yesPct}%` }} initial={false} transition={spring} />
     </motion.div>
   );
 }
@@ -114,7 +103,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
           </div>
         </div>
         <div className="mt-3">
-          <div className="mb-1.5 flex justify-between text-xs font-semibold">
+          <div className="mb-1.5 flex justify-between font-mono text-xs font-bold">
             <span className="text-yes">YES {total > 0 ? yes + "%" : "—"}</span>
             <span className="text-no">{total > 0 ? 100 - yes + "%" : "—"} NO</span>
           </div>

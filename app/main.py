@@ -11,7 +11,7 @@ from .database import Base, engine, get_db
 from .deps import current_user, require_membership
 from .models import Membership, User
 from .push import init_vapid
-from .routers import admin, auth, events, groups, markets, oauth, push, users
+from .routers import admin, auth, events, groups, live, markets, oauth, push, users
 from .schemas import MemberOut
 
 # Importing snapshots registers the after-commit listeners that append a Snapshot
@@ -57,6 +57,16 @@ app.include_router(events.router)
 app.include_router(push.router)
 app.include_router(oauth.router)
 app.include_router(admin.router)
+app.include_router(live.router)
+
+
+@app.on_event("startup")
+async def _capture_event_loop():
+    import asyncio
+
+    from .live import broker
+
+    broker.set_loop(asyncio.get_running_loop())
 
 
 @app.get("/health", tags=["meta"])

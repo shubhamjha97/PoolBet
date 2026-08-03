@@ -134,7 +134,19 @@ def rollback_to(db, snapshot_id: str) -> dict:
 # ---------------------------------------------------------------------------
 @event.listens_for(SessionLocal, "after_flush")
 def _track_new_events(session, flush_context):
-    new = [(o.id, o.type) for o in session.new if isinstance(o, Event)]
+    new = [
+        {
+            "id": o.id,
+            "type": o.type,
+            "group_id": o.group_id,
+            "market_id": o.market_id,
+            "ts": o.ts.isoformat() if o.ts else None,
+            "actor_name": (o.payload or {}).get("actor_name"),
+            "payload": o.payload or {},
+        }
+        for o in session.new
+        if isinstance(o, Event)
+    ]
     if new:
         session.info.setdefault("_new_events", []).extend(new)
 
@@ -144,11 +156,21 @@ def _snapshot_after_commit(session):
     pending = session.info.pop("_new_events", None)
     if not pending:
         return
-    last_id, last_type = pending[-1]
+    last = pending[-1]
     # Snapshot the just-committed state in a fresh session so we dump durable rows.
     with SessionLocal() as s2:
         try:
-            snapshot_state(s2, label=f"auto:{last_type}", after_event_id=last_id)
+            snapshot_state(s2, label=f"auto:{last['type']}", after_event_id=last["id"])
             s2.commit()
         except Exception:
             s2.rollback()
+
+    # Fan out to live SSE subscribers (best-effort; never affects the request).
+    try:
+        from .live import broker
+
+        for ev in pending:
+            if ev.get("group_id"):
+                broker.publish(ev["group_id"], ev)
+    except Exception:
+        pass

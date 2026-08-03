@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Copy, Link2, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
-import type { AccessRequest, Group, Market } from "@/lib/types";
+import type { AccessRequest, Group, Market, TimelineEvent } from "@/lib/types";
 import { fmt } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/lib/auth";
+import { useGroupStream } from "@/lib/live";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarketsTab } from "@/components/market/MarketsTab";
 import { StatsTab } from "@/components/group/StatsTab";
 import { TimelineTab } from "@/components/group/TimelineTab";
+import { LiveFeed } from "@/components/group/LiveFeed";
 
 function rememberGroup(id: string) {
   try {
@@ -47,6 +49,16 @@ export function GroupPage() {
   }, [id]);
 
   useEffect(() => { rememberGroup(id); refresh(); }, [id, refresh]);
+
+  // Live activity: append to the banter feed + debounce a data refresh so odds
+  // bars pulse live when anyone in the group bets.
+  const [liveEvents, setLiveEvents] = useState<TimelineEvent[]>([]);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useGroupStream(id, (e) => {
+    setLiveEvents((prev) => [e, ...prev].slice(0, 20));
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => refresh(), 400);
+  });
 
   if (loading) return <div className="flex justify-center py-16 text-muted-foreground"><Loader2 className="size-5 animate-spin" /></div>;
   if (!group) return <div className="text-muted-foreground">Group not found.</div>;
@@ -89,7 +101,9 @@ export function GroupPage() {
         </div>
       )}
 
-      <Tabs defaultValue={params.get("market") ? "markets" : "markets"}>
+      <LiveFeed events={liveEvents} />
+
+      <Tabs defaultValue="markets">
         <TabsList className="w-full">
           <TabsTrigger value="markets" className="flex-1">Markets</TabsTrigger>
           <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>

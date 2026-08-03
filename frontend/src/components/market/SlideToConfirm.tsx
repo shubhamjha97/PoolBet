@@ -71,10 +71,14 @@ export function SlideToConfirm({
         disabled && "pointer-events-none opacity-50",
       )}
     >
-      {/* colored fill trailing the thumb */}
+      {/* colored fill trailing the thumb — brightens + glows as it sweeps across */}
       <div
-        className={cn("absolute inset-y-0 left-0 rounded-full", colorClass)}
-        style={{ width: x + THUMB + PAD, transition: dragging ? "none" : "width 220ms ease" }}
+        className={cn("absolute inset-y-0 left-0 rounded-full brightness-110", colorClass)}
+        style={{
+          width: x + THUMB + PAD,
+          boxShadow: progress > 0.05 ? `0 0 18px -2px hsl(var(--primary) / ${0.25 + progress * 0.4})` : "none",
+          transition: dragging ? "none" : "width 220ms ease, box-shadow 220ms ease",
+        }}
       />
       {/* label */}
       <div

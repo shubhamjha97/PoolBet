@@ -129,7 +129,7 @@ export function GroupPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{group.name}</h1>
           <div className="shrink-0 text-right">
             <div className="text-xs text-muted-foreground">your balance</div>
-            <div className="text-2xl font-bold font-mono tabular-nums">{me ? fmt(me.balance) : "—"}</div>
+            <div className="text-3xl font-extrabold font-mono tabular-nums">{me ? fmt(me.balance) : "—"}</div>
             <Button variant="outline" size="sm" className="tactile mt-1 active:scale-95" onClick={buyIn}><Plus className="size-3.5" /> Buy in</Button>
           </div>
         </div>

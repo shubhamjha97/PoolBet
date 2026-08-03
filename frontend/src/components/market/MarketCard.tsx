@@ -107,7 +107,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
           <div className="flex shrink-0 items-center gap-2">
             <span className="tap-target flex items-center justify-center rounded-md text-muted-foreground hover:text-primary" onClick={openShare} role="button" aria-label="Share market"><Share2 className="size-4" /></span>
             <span className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium", STATUS_STYLES[market.status])}>
-              {market.status === "OPEN" && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+              {market.status === "OPEN" && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 [animation:pb-live_1.8s_ease-in-out_infinite]" />}
               {market.status}
             </span>
           </div>

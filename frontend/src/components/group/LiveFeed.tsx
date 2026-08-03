@@ -69,7 +69,7 @@ export function LiveFeed({ events, groupId, onLocalEcho }: {
   return (
     <div className="rounded-xl border bg-card p-3">
       <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        <Radio className="size-3 animate-pulse text-yes" /> Live
+        <Radio className="size-3 text-yes [animation:pb-live_1.8s_ease-in-out_infinite]" /> Live
       </div>
       <div className="space-y-1">
         <AnimatePresence initial={false}>

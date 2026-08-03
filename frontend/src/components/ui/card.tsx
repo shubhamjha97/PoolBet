@@ -10,8 +10,9 @@ const Card = React.forwardRef<
     ref={ref}
     className={cn(
       "rounded-2xl border bg-card text-card-foreground shadow",
-      // glassmorphic in dark: translucent zinc, blur, inner highlight
-      "dark:border-white/10 dark:bg-zinc-900/60 dark:backdrop-blur-xl dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)]",
+      // translucent "glass" without backdrop-blur — blur-xl on every card tanks
+      // iOS Safari. A more opaque tint + inner highlight keeps the look, cheaply.
+      "dark:border-white/10 dark:bg-zinc-900/80 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]",
       className
     )}
     {...props}

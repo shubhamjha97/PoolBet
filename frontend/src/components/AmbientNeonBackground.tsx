@@ -11,8 +11,8 @@ export function AmbientNeonBackground() {
     if (!ctx) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let w = 0, h = 0, raf = 0;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5); // cap for mobile GPUs
+    let w = 0, h = 0, raf = 0, lastT = 0;
 
     const resize = () => {
       w = canvas.clientWidth; h = canvas.clientHeight;
@@ -40,11 +40,14 @@ export function AmbientNeonBackground() {
     };
 
     const render = (t: number) => {
-      ctx.clearRect(0, 0, w, h);
-      grid();
-      const R = Math.max(w, h) * 0.5;
-      orb(w * 0.25 + Math.sin(t / 4000) * w * 0.1, h * 0.2 + Math.cos(t / 5000) * h * 0.08, R, "rgba(34,197,94,0.12)");
-      orb(w * 0.8 + Math.cos(t / 4500) * w * 0.1, h * 0.85 + Math.sin(t / 5200) * h * 0.08, R, "rgba(236,72,153,0.10)");
+      if (t - lastT >= 33) { // throttle to ~30fps
+        lastT = t;
+        ctx.clearRect(0, 0, w, h);
+        grid();
+        const R = Math.max(w, h) * 0.5;
+        orb(w * 0.25 + Math.sin(t / 4000) * w * 0.1, h * 0.2 + Math.cos(t / 5000) * h * 0.08, R, "rgba(34,197,94,0.12)");
+        orb(w * 0.8 + Math.cos(t / 4500) * w * 0.1, h * 0.85 + Math.sin(t / 5200) * h * 0.08, R, "rgba(236,72,153,0.10)");
+      }
       if (!reduce) raf = requestAnimationFrame(render);
     };
     raf = requestAnimationFrame(render);

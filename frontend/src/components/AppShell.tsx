@@ -1,14 +1,21 @@
+import { useState } from "react";
 import { Outlet, Link } from "react-router-dom";
-import { LogOut, Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LogOut, Moon, Sun, Shield } from "lucide-react";
+import {
+  Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle,
+} from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { haptic } from "@/lib/haptics";
-import { InstallButton } from "./InstallButton";
+
+const rowCls = "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-secondary active:scale-[0.99]";
 
 export function AppShell() {
   const { user, isAdmin, logout } = useAuth();
   const { theme, toggle } = useTheme();
+  const [open, setOpen] = useState(false);
+
+  const initial = user?.name?.slice(0, 1).toUpperCase() ?? "?";
 
   return (
     <div className="relative z-10 min-h-dvh">
@@ -22,28 +29,43 @@ export function AppShell() {
             <span className="h-5 w-5 rounded-md bg-gradient-to-br from-yes to-no shadow-glow-yes" />
             PoolBet
           </Link>
-          <div className="flex items-center gap-1">
-            {isAdmin && (
-              <Button asChild variant="ghost" size="sm" className="tactile">
-                <Link to="/admin" onClick={() => haptic("select")}>Admin</Link>
-              </Button>
-            )}
-            <InstallButton />
-            <Button variant="ghost" size="icon" className="tap-target tactile" aria-label="Toggle theme" onClick={() => { haptic("select"); toggle(); }}>
-              {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </Button>
-            {user && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="tactile"
-                onClick={() => { haptic("tap"); logout(); }}
-              >
-                <LogOut className="size-4" />
-                <span className="hidden sm:inline">Log out</span>
-              </Button>
-            )}
-          </div>
+
+          {user && (
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <button
+                  aria-label="Account"
+                  onClick={() => haptic("select")}
+                  className="grid size-9 place-items-center rounded-full bg-gradient-to-br from-yes to-no text-sm font-bold text-black shadow-[0_2px_10px_-2px_hsl(var(--no)/0.5)] transition-transform active:scale-95"
+                >
+                  {initial}
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-72">
+                <SheetHeader className="text-left">
+                  <SheetTitle className="flex items-center gap-3">
+                    <span className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-yes to-no text-base font-bold text-black">{initial}</span>
+                    {user.name}
+                  </SheetTitle>
+                </SheetHeader>
+
+                <div className="mt-6 space-y-1">
+                  {isAdmin && (
+                    <Link to="/admin" onClick={() => { setOpen(false); haptic("select"); }} className={rowCls}>
+                      <Shield className="size-4 text-muted-foreground" /> Admin
+                    </Link>
+                  )}
+                  <button className={rowCls} onClick={() => { toggle(); haptic("select"); }}>
+                    {theme === "dark" ? <Sun className="size-4 text-muted-foreground" /> : <Moon className="size-4 text-muted-foreground" />}
+                    {theme === "dark" ? "Light mode" : "Dark mode"}
+                  </button>
+                  <button className={rowCls} onClick={() => { haptic("tap"); logout(); }}>
+                    <LogOut className="size-4 text-destructive" /> <span className="text-destructive">Log out</span>
+                  </button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
       </header>
 

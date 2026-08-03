@@ -19,6 +19,14 @@ export default {
         sans: ['"Inter"', "system-ui", "-apple-system", "sans-serif"],
         mono: ['"Inter"', "ui-monospace", "monospace"],
       },
+      // Dial every weight utility one step lighter for a skinnier overall feel.
+      fontWeight: {
+        normal: "400",
+        medium: "500",
+        semibold: "500",
+        bold: "600",
+        extrabold: "700",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

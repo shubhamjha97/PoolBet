@@ -476,6 +476,7 @@ def _apply_settlement(db: Session, market: Market, outcome: str, fraction: Decim
                 amount=str(house_take),
             )
 
+    winner_user_ids: list[str] = []
     for b in market.bets:
         p = payouts.get(b.id, Decimal("0"))
         b.payout = p
@@ -483,6 +484,20 @@ def _apply_settlement(db: Session, market: Market, outcome: str, fraction: Decim
             member = db.get(Membership, b.membership_id)
             member.balance = member.balance + p
             record_txn(db, member, p, TxnKind.PAYOUT, market_id=market.id)
+            if p > b.amount:  # actually profited (not just a refund)
+                winner_user_ids.append(member.user_id)
+
+    # Smart push: tell winners their bet paid off (best-effort; never blocks settle).
+    try:
+        if winner_user_ids:
+            send_push_to_users(
+                db, list(set(winner_user_ids)),
+                title="You won! 🎉",
+                body=f"Your bet on “{market.question}” paid off",
+                url=f"/#/market/{market.id}",
+            )
+    except Exception:
+        pass
 
     market.outcome = outcome
     market.outcome_fraction = fraction if outcome == "SCALAR" else None

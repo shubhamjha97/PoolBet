@@ -17,6 +17,15 @@ import {
 } from "@/components/ui/dialog";
 
 const PRESETS: [string, number][] = [["1h", 1], ["6h", 6], ["1d", 24], ["3d", 72], ["7d", 168]];
+
+// One-tap starters. `members: true` fills outcomes with the group's member names.
+const TEMPLATES: { label: string; question: string; outcomes?: string[]; members?: boolean }[] = [
+  { label: "Who pays? 🍽️", question: "Who's paying for this one?", members: true },
+  { label: "Leave time 🕐", question: "What time do we actually leave?", outcomes: ["Before 8am", "8–10am", "10am–12pm", "After 12pm"] },
+  { label: "Who's late? ⏰", question: "Who shows up last?", members: true },
+  { label: "Will it rain? 🌧️", question: "Will it rain today?" },
+  { label: "Over/under 📊", question: "Over/under — will we go over?" },
+];
 const localDT = (hoursAhead: number) => {
   const d = new Date(Date.now() + hoursAhead * 3.6e6);
   return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16);
@@ -32,6 +41,19 @@ export function MarketsTab({ group, markets, onRefresh, openMarketId }: { group:
   const [busy, setBusy] = useState(false);
   const [multi, setMulti] = useState(false);
   const [outcomes, setOutcomes] = useState<string[]>(["", ""]);
+
+  function applyTemplate(t: (typeof TEMPLATES)[number]) {
+    haptic("select");
+    setQuestion(t.question);
+    const memberNames = group.members.map((m) => m.name).slice(0, 8);
+    if (t.members && memberNames.length >= 2) {
+      setMulti(true); setOutcomes(memberNames);
+    } else if (t.outcomes) {
+      setMulti(true); setOutcomes(t.outcomes);
+    } else {
+      setMulti(false); setOutcomes(["", ""]);
+    }
+  }
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -89,6 +111,17 @@ export function MarketsTab({ group, markets, onRefresh, openMarketId }: { group:
         <DialogContent>
           <DialogHeader><DialogTitle>New market</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Quick start</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {TEMPLATES.map((t) => (
+                  <button key={t.label} type="button" onClick={() => applyTemplate(t)}
+                    className="rounded-full border bg-secondary px-3 py-1 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary active:scale-95">
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>{multi ? "Question" : "Question (YES / NO)"}</Label>
               <Input placeholder={multi ? "Who drives the first leg?" : "Will the Chiefs cover the spread?"} value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={280} />

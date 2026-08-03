@@ -24,11 +24,11 @@ function Hero() {
   // seam line); GPU-only transforms. Reveal once, then loop forever.
   return (
     <div className="relative mx-auto grid size-44 place-items-center [animation:pb-reveal_0.65s_cubic-bezier(.2,.9,.25,1.2)_both]" aria-hidden>
-      {/* soft outer glow */}
-      <div className="absolute size-44 rounded-full [background:radial-gradient(circle,hsl(var(--yes)/0.3),hsl(var(--no)/0.24)_58%,transparent_72%)] blur-lg [animation:pb-breathe_6s_ease-in-out_infinite]" />
+      {/* soft outer glow — big + heavily blurred so it fades gradually (no ring banding) */}
+      <div className="absolute size-52 rounded-full [background:radial-gradient(circle,hsl(var(--yes)/0.18),hsl(var(--no)/0.12)_46%,transparent_68%)] blur-2xl [animation:pb-breathe_6s_ease-in-out_infinite]" />
 
-      {/* the sphere */}
-      <div className="relative size-40 overflow-hidden rounded-full ring-1 ring-white/15 shadow-[0_0_50px_-8px_hsl(var(--no)/0.5)]">
+      {/* the sphere (no box-shadow halo — it banded; the glow div handles the halo) */}
+      <div className="relative size-40 overflow-hidden rounded-full ring-1 ring-white/15">
         {/* dark base */}
         <div className="absolute inset-0 bg-[#050405]" />
 
@@ -92,9 +92,9 @@ export function Landing() {
 
   return (
     <div className="noise relative z-10 flex min-h-dvh items-center justify-center overflow-hidden px-6 pt-safe pb-safe">
-      {/* dramatic ambient blobs */}
-      <div className="pointer-events-none absolute -left-[8vmax] -top-[14vmax] size-[46vmax] rounded-full bg-yes/20 blur-[80px]" />
-      <div className="pointer-events-none absolute -bottom-[16vmax] -right-[10vmax] size-[46vmax] rounded-full bg-no/20 blur-[80px]" />
+      {/* ambient glow — radial fades to transparent (gradual falloff → no ring banding) */}
+      <div className="pointer-events-none absolute -left-[14vmax] -top-[22vmax] size-[80vmax] [background:radial-gradient(circle,hsl(var(--yes)/0.13),transparent_58%)]" />
+      <div className="pointer-events-none absolute -bottom-[24vmax] -right-[16vmax] size-[80vmax] [background:radial-gradient(circle,hsl(var(--no)/0.11),transparent_58%)]" />
 
       <div className="relative z-10 w-full max-w-[380px] text-center">
         <div className={cn("origin-top overflow-hidden transition-all [transition-duration:420ms] ease-out", mode ? "-translate-y-2 max-h-[80px] scale-[0.66] opacity-50" : "max-h-[240px]")}>

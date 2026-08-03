@@ -295,7 +295,7 @@ export function AdminPage() {
                   </button>
                   {snap && (
                     <Button variant="outline" size="sm" data-testid="rollback-btn"
-                      className="tactile shrink-0 text-destructive hover:text-destructive active:scale-95"
+                      className="tactile shrink-0 border-destructive/40 bg-transparent text-destructive hover:border-destructive/60 hover:bg-destructive/10 hover:text-destructive active:scale-95"
                       onClick={() => { haptic("tap"); setConfirm(snap); }}>
                       <RotateCcw className="size-3.5" /> Roll back
                     </Button>
@@ -322,7 +322,7 @@ export function AdminPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>Roll back the app?</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground">This restores the entire app state to this snapshot. Everything after it is undone.</p>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setConfirm(null)}>Cancel</Button>
             <Button variant="destructive" disabled={busy} onClick={rollback}>Roll back</Button>
           </DialogFooter>

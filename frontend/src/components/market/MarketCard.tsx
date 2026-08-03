@@ -165,7 +165,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
                 <Lock className="size-3.5" /> Bet anonymously
               </label>
               <Button disabled={busy || amount <= 0} className={cn("tactile h-11 w-full active:scale-95", side === "YES" ? "bg-yes text-black hover:bg-yes/90" : "bg-no text-white hover:bg-no/90")}
-                onClick={() => act(() => api("POST", `/markets/${market.id}/bets`, { side, amount: String(amount), anonymous: anon }), `Bet ${fmt(amount)} on ${side}`)}>
+                onClick={() => act(() => api("POST", `/markets/${market.id}/bets`, { side, amount: String(amount), anonymous: anon }, { "Idempotency-Key": crypto.randomUUID() }), `Bet ${fmt(amount)} on ${side}`)}>
                 Bet {side}
               </Button>
             </div>

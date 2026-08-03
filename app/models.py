@@ -273,6 +273,18 @@ class Snapshot(Base):
     data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
 
+class IdempotencyKey(Base):
+    """Dedupe key for at-most-once mutations. A retried request carrying the same
+    Idempotency-Key won't be processed (or logged) twice — the unique constraint
+    makes concurrent duplicates race to a single winner."""
+    __tablename__ = "idempotency_keys"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    key: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 def record_event(
     db,
     type: str,

@@ -4,8 +4,9 @@ from datetime import timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -15,6 +16,7 @@ from ..models import (
     Bet,
     Dispute,
     Group,
+    IdempotencyKey,
     Market,
     MarketStatus,
     Membership,
@@ -208,6 +210,7 @@ def get_market(
 def place_bet(
     market_id: str,
     body: BetCreate,
+    request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(current_user),
 ):
@@ -215,6 +218,12 @@ def place_bet(
     if not market:
         raise HTTPException(status_code=404, detail="market not found")
     member = require_membership(db, market.group_id, user)
+
+    # Idempotency: a retried request with the same key is a no-op (returns current
+    # state), so the bet + its commit-log event are never applied twice.
+    idem = request.headers.get("Idempotency-Key")
+    if idem and db.scalar(select(IdempotencyKey).where(IdempotencyKey.key == idem)):
+        return _serialize_market(db, market)
     # Strict transaction: lock this member's row so the balance check + debit are
     # atomic against concurrent bets (a real row lock on Postgres; SQLite already
     # serializes writes). Prevents double-spend / overdraft races.
@@ -260,8 +269,14 @@ def place_bet(
         actor_name=user.name if not body.anonymous else None,
         market_question=market.question,
     )
+    if idem:
+        db.add(IdempotencyKey(key=idem, user_id=user.id))
     try:
         db.commit()
+    except IntegrityError:
+        # Concurrent duplicate (same Idempotency-Key): the other request won.
+        db.rollback()
+        return _serialize_market(db, db.get(Market, market_id))
     except Exception:
         db.rollback()
         raise HTTPException(status_code=409, detail="could not place bet — please retry")

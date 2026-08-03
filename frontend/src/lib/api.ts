@@ -26,8 +26,13 @@ function detailToMessage(detail: unknown, status: number): string {
   }
 }
 
-export async function api<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = { "content-type": "application/json" };
+export async function api<T = unknown>(
+  method: string,
+  path: string,
+  body?: unknown,
+  extraHeaders?: Record<string, string>,
+): Promise<T> {
+  const headers: Record<string, string> = { "content-type": "application/json", ...extraHeaders };
   const tok = getToken();
   if (tok) headers.authorization = "Bearer " + tok;
 

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Radio, Send } from "lucide-react";
 import type { TimelineEvent } from "@/lib/types";
 import { fmt, timeAgo } from "@/lib/format";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,8 @@ function describe(e: TimelineEvent): string {
   }
 }
 
+const QUICK_REACTIONS = ["🔥", "😂", "🎉"];
+
 export function LiveFeed({ events, groupId, onLocalEcho }: {
   events: TimelineEvent[];
   groupId: string;
@@ -34,6 +37,18 @@ export function LiveFeed({ events, groupId, onLocalEcho }: {
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [rx, setRx] = useState<{ counts: Record<string, Record<string, number>>; mine: Record<string, string[]> }>({ counts: {}, mine: {} });
+
+  useEffect(() => {
+    let alive = true;
+    api<typeof rx>("GET", `/groups/${groupId}/reactions`).then((r) => { if (alive) setRx(r); }).catch(() => {});
+    return () => { alive = false; };
+  }, [groupId, events.length]);
+
+  const react = async (eventId: string, emoji: string) => {
+    haptic("select");
+    try { setRx(await api("POST", `/events/${eventId}/react`, { emoji })); } catch { /* ignore */ }
+  };
 
   const send = async () => {
     const t = text.trim();
@@ -66,10 +81,28 @@ export function LiveFeed({ events, groupId, onLocalEcho }: {
               animate={{ opacity: 1, y: 0, height: "auto" }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: [0.34, 1.4, 0.5, 1] }}
-              className="flex items-center justify-between gap-2 text-sm"
+              className="text-sm"
             >
-              <span className={e.type === "comment" ? "min-w-0 truncate" : "min-w-0 truncate text-muted-foreground"}>{describe(e)}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(e.ts)}</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className={e.type === "comment" ? "min-w-0 truncate" : "min-w-0 truncate text-muted-foreground"}>{describe(e)}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(e.ts)}</span>
+              </div>
+              {!e.id.startsWith("local-") && (
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                  {[...new Set([...QUICK_REACTIONS, ...Object.keys(rx.counts[e.id] || {})])].map((em) => {
+                    const n = rx.counts[e.id]?.[em] ?? 0;
+                    if (n === 0 && !QUICK_REACTIONS.includes(em)) return null;
+                    const mineHas = (rx.mine[e.id] || []).includes(em);
+                    return (
+                      <button key={em} onClick={() => react(e.id, em)}
+                        className={cn("rounded-full border px-1.5 py-px text-xs leading-5 transition-colors active:scale-90",
+                          mineHas ? "border-primary/60 bg-primary/15" : "border-transparent text-muted-foreground hover:bg-secondary")}>
+                        {em}{n > 0 && <span className="ml-0.5 tabular-nums">{n}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>

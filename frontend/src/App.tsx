@@ -12,11 +12,6 @@ export default function App() {
 
   return (
     <>
-      {/* light-mode ambient aurora wash (kept subtle; hidden in dark) */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 dark:hidden">
-        <div className="absolute -left-[18vmax] -top-[20vmax] size-[70vmax] [background:radial-gradient(circle,hsl(var(--yes)/0.16),transparent_60%)]" />
-        <div className="absolute -bottom-[22vmax] -right-[16vmax] size-[70vmax] [background:radial-gradient(circle,hsl(var(--no)/0.14),transparent_60%)]" />
-      </div>
       {loading ? (
         <div className="grid min-h-dvh place-items-center text-muted-foreground">Loading…</div>
       ) : !user ? (

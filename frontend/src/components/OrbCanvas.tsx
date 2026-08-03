@@ -35,8 +35,8 @@ void main(){
   q += 0.5*vec2(fbm(q + vec2(0.0, t)), fbm(q + vec2(t, 3.0)));
   float n = fbm(q*1.3 - t*0.8);
 
-  vec3 emerald = vec3(0.16, 0.82, 0.52);
-  vec3 pink    = vec3(0.96, 0.42, 0.73);
+  vec3 emerald = vec3(0.22, 0.96, 0.34);  /* bright gold-green (matches --yes) */
+  vec3 pink    = vec3(0.98, 0.40, 0.72);
   vec3 col = mix(emerald, pink, smoothstep(0.25, 0.75, n));
 
   // a brighter wisp drifting through

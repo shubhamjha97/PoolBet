@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Radio, Send } from "lucide-react";
+import { Radio } from "lucide-react";
 import type { TimelineEvent } from "@/lib/types";
 import { fmt, timeAgo } from "@/lib/format";
 import { api } from "@/lib/api";
@@ -85,8 +85,8 @@ export function LiveFeed({ events, groupId, onLocalEcho }: {
           maxLength={500}
           aria-label="Comment"
         />
-        <Button size="icon" className="tap-target tactile active:scale-95" disabled={busy || !text.trim()} onClick={send} aria-label="Send comment">
-          <Send className="size-4" />
+        <Button size="sm" className="tactile shrink-0 px-4 active:scale-95" disabled={busy || !text.trim()} onClick={send} aria-label="Send comment">
+          Send
         </Button>
       </div>
     </div>

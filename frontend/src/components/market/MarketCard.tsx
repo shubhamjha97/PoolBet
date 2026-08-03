@@ -43,8 +43,8 @@ function AnimatedOddsBar({ yesPct, total }: { yesPct: number; total: number }) {
   // new volume keep it lively where it matters.
   return (
     <motion.div animate={controls} className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800/80 p-0.5">
-      <motion.div className="h-full rounded-l-full bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.4)]" animate={{ width: `${yesPct}%` }} initial={false} transition={spring} />
-      <motion.div className="h-full rounded-r-full bg-gradient-to-l from-pink-600 to-pink-400 shadow-[0_0_12px_rgba(236,72,153,0.4)]" animate={{ width: `${100 - yesPct}%` }} initial={false} transition={spring} />
+      <motion.div className="h-full rounded-l-full bg-yes shadow-[0_0_12px_hsl(var(--yes)/0.45)]" animate={{ width: `${yesPct}%` }} initial={false} transition={spring} />
+      <motion.div className="h-full rounded-r-full bg-no shadow-[0_0_12px_hsl(var(--no)/0.45)]" animate={{ width: `${100 - yesPct}%` }} initial={false} transition={spring} />
     </motion.div>
   );
 }
@@ -100,8 +100,8 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
   const probPts = oddsSeries(market.bets);
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm dark:shadow-glass">
-      <button className="w-full p-4 text-left" onClick={() => { setOpen((o) => !o); haptic("select"); }}>
+    <div className="overflow-hidden">
+      <button className="w-full py-4 text-left" onClick={() => { setOpen((o) => !o); haptic("select"); }}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 font-medium">{market.question}</div>
           <div className="flex shrink-0 items-center gap-2">
@@ -120,7 +120,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
                 <div key={o.label} className="flex items-center gap-2 text-xs">
                   <span className="w-20 shrink-0 truncate font-medium">{o.label}</span>
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800/80">
-                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: `${p}%` }} />
+                    <div className="h-full rounded-full bg-yes" style={{ width: `${p}%` }} />
                   </div>
                   <span className="w-8 shrink-0 text-right font-mono tabular-nums text-muted-foreground">{p}%</span>
                 </div>
@@ -144,7 +144,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
       </button>
 
       {open && (
-        <div className="border-t px-4 pb-4 pt-3 animate-fade-up">
+        <div className="mb-3 rounded-xl bg-card p-4 animate-fade-up">
           <p className="mb-3 text-xs text-muted-foreground">by {market.proposer_name} · pot {fmt(total)}</p>
 
           {!isMulti && probPts.length >= 2 && (

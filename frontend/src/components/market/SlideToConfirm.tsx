@@ -26,7 +26,9 @@ export function SlideToConfirm({
   const [x, setX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [done, setDone] = useState(false);
+  const [burstKey, setBurstKey] = useState(0);
   const lastTick = useRef(0);
+  const fireBurst = () => setBurstKey((k) => k + 1);
 
   const maxX = () => {
     const w = trackRef.current?.clientWidth ?? 0;
@@ -51,6 +53,7 @@ export function SlideToConfirm({
     if (x >= maxX() * 0.9 && !done) {
       setX(maxX());
       setDone(true);
+      fireBurst();
       haptic("success");
       onConfirm();
       // reset shortly after so the control can be reused
@@ -64,13 +67,17 @@ export function SlideToConfirm({
   const progress = maxX() ? x / maxX() : 0;
 
   return (
-    <div
-      ref={trackRef}
-      className={cn(
-        "relative h-[52px] w-full select-none overflow-hidden rounded-full border bg-secondary",
-        disabled && "pointer-events-none opacity-50",
+    <div className="relative">
+      {burstKey > 0 && (
+        <span key={burstKey} className="pointer-events-none absolute inset-0 rounded-full [animation:pb-burst_420ms_ease-out_forwards]" />
       )}
-    >
+      <div
+        ref={trackRef}
+        className={cn(
+          "relative h-[52px] w-full select-none overflow-hidden rounded-full border bg-secondary",
+          disabled && "pointer-events-none opacity-50",
+        )}
+      >
       {/* colored fill trailing the thumb — brightens + glows as it sweeps across */}
       <div
         className={cn("absolute inset-y-0 left-0 rounded-full brightness-110", colorClass)}
@@ -108,9 +115,10 @@ export function SlideToConfirm({
         onPointerMove={(e) => { if (dragging) move(e.clientX); }}
         onPointerUp={release}
         onPointerCancel={release}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setDone(true); haptic("success"); onConfirm(); setTimeout(() => setDone(false), 900); } }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setDone(true); fireBurst(); haptic("success"); onConfirm(); setTimeout(() => setDone(false), 900); } }}
       >
         {done ? <Check className="size-5" /> : <ArrowRight className="size-5" />}
+      </div>
       </div>
     </div>
   );

@@ -100,7 +100,7 @@ export function MarketsTab({ group, markets, onRefresh, openMarketId }: { group:
           {markets.length ? "No markets match your search." : "No markets yet. Propose the first one."}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y divide-white/[0.045]">
           {filtered.map((m) => (
             <MarketCard key={m.id} market={m} onRefresh={onRefresh} defaultOpen={m.id === openMarketId} />
           ))}

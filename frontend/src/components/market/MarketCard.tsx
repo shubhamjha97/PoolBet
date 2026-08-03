@@ -1,0 +1,271 @@
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { motion, useAnimationControls } from "framer-motion";
+import {
+  ChevronDown, Link2, Camera, Copy, Swords, TrendingUp, Minus, Plus, RotateCcw, Lock,
+} from "lucide-react";
+import { toast } from "sonner";
+import { api, upload } from "@/lib/api";
+import type { Bet, Market, Side } from "@/lib/types";
+import { fmt, closesInfo, poolPct, oddsSeries } from "@/lib/format";
+import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+import { ProbabilityChart } from "@/components/Charts";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+
+const STATUS_STYLES: Record<string, string> = {
+  OPEN: "text-primary border-primary/40",
+  CLOSED: "text-amber-400 border-amber-400/40",
+  RESOLVING: "text-amber-400 border-amber-400/40",
+  DISPUTED: "text-no border-no/40",
+  RESOLVED: "text-muted-foreground border-border",
+};
+
+/** Fluid gradient YES/NO bar that flows continuously and pulses on new volume. */
+function AnimatedOddsBar({ yesPct, total }: { yesPct: number; total: number }) {
+  const controls = useAnimationControls();
+  const prev = useRef(total);
+  useEffect(() => {
+    if (total > prev.current) {
+      controls.start({ scale: [1, 1.05, 1], transition: { duration: 0.55, ease: "easeOut" } });
+    }
+    prev.current = total;
+  }, [total, controls]);
+
+  return (
+    <motion.div animate={controls} className="flex h-3 w-full gap-[2px] overflow-hidden rounded-full bg-secondary">
+      <motion.div className="relative h-full overflow-hidden rounded-full" animate={{ width: `${yesPct}%` }} initial={false} transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}>
+        <motion.div
+          className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--yes))_0%,#7dffcf_50%,hsl(var(--yes))_100%)] bg-[length:200%_100%] shadow-[0_0_12px_hsl(var(--yes)/0.6)]"
+          animate={{ backgroundPosition: ["0% 0%", "200% 0%"] }}
+          transition={{ duration: 2.6, repeat: Infinity, ease: "linear" }}
+        />
+      </motion.div>
+      <motion.div className="relative h-full overflow-hidden rounded-full" animate={{ width: `${100 - yesPct}%` }} initial={false} transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}>
+        <motion.div
+          className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--no))_0%,#ff86bd_50%,hsl(var(--no))_100%)] bg-[length:200%_100%] shadow-[0_0_12px_hsl(var(--no)/0.6)]"
+          animate={{ backgroundPosition: ["0% 0%", "200% 0%"] }}
+          transition={{ duration: 2.6, repeat: Infinity, ease: "linear" }}
+        />
+      </motion.div>
+    </motion.div>
+  );
+}
+
+export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market; onRefresh: () => void; defaultOpen?: boolean }) {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(!!defaultOpen);
+  const [side, setSide] = useState<Side>("YES");
+  const [amount, setAmount] = useState(0);
+  const [anon, setAnon] = useState(false);
+  const [pct, setPct] = useState(50);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const { total, yes } = poolPct(market);
+  const ci = closesInfo(market.closes_at);
+  const isProposer = market.proposer_user_id === user?.id;
+  const bettable = market.status === "OPEN" && !ci.closed;
+
+  async function act(fn: () => Promise<unknown>, ok?: string) {
+    setBusy(true);
+    haptic("tap");
+    try {
+      await fn();
+      if (ok) toast.success(ok);
+      haptic("success");
+      onRefresh();
+    } catch (e) {
+      haptic("warn");
+      toast.error(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const setAmt = (v: number) => setAmount(Math.max(0, Math.round(v)));
+
+  // action cards: seed the bet form from an existing bet
+  const match = (b: Bet) => { setSide(b.side); setAmt(Number(b.amount)); setOpen(true); haptic("select"); };
+  const fade = (b: Bet) => { setSide(b.side === "YES" ? "NO" : "YES"); setAmt(Number(b.amount)); haptic("select"); };
+  const raise = (b: Bet) => { setSide(b.side); setAmt(Math.round(Number(b.amount) * 1.5)); haptic("select"); };
+
+  const copyLink = (e: MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(`${location.origin}/next/#/market/${market.id}`);
+    toast.success("Market link copied");
+    haptic("select");
+  };
+
+  const probPts = oddsSeries(market.bets);
+
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card shadow-glass">
+      <button className="w-full p-4 text-left" onClick={() => { setOpen((o) => !o); haptic("select"); }}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 font-medium">{market.question}</div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="tap-target flex items-center justify-center rounded-md text-muted-foreground hover:text-primary" onClick={copyLink} role="button" aria-label="Copy link"><Link2 className="size-4" /></span>
+            <Badge variant="outline" className={cn("gap-1", STATUS_STYLES[market.status])}>{market.status}</Badge>
+          </div>
+        </div>
+        <div className="mt-3">
+          <div className="mb-1.5 flex justify-between text-xs font-semibold">
+            <span className="text-yes">YES {total > 0 ? yes + "%" : "—"}</span>
+            <span className="text-no">{total > 0 ? 100 - yes + "%" : "—"} NO</span>
+          </div>
+          <AnimatedOddsBar yesPct={total > 0 ? yes : 50} total={total} />
+        </div>
+        <div className="mt-2.5 flex items-center justify-between text-xs text-muted-foreground">
+          <span>{market.status === "RESOLVED" ? `resolved · ${market.outcome}` : ci.text} · pot {fmt(total)}</span>
+          <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t px-4 pb-4 pt-3 animate-fade-up">
+          <p className="mb-3 text-xs text-muted-foreground">by {market.proposer_name} · pot {fmt(total)}</p>
+
+          {probPts.length >= 2 && (
+            <div className="mb-3 rounded-lg bg-secondary p-3">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Odds over time</div>
+              <ProbabilityChart points={probPts} />
+            </div>
+          )}
+
+          {market.rules && (
+            <div className="mb-3 rounded-lg bg-secondary p-3">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Rules</div>
+              <div className="whitespace-pre-wrap text-sm">{market.rules}</div>
+            </div>
+          )}
+
+          {market.evidence_url ? (
+            <img src={market.evidence_url} alt="result evidence" className="mb-3 w-full rounded-lg" />
+          ) : ci.closed ? (
+            <label className="tactile mb-3 inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm active:scale-95">
+              <Camera className="size-4" /> Add photo evidence
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) act(() => upload(`/markets/${market.id}/evidence`, f), "Evidence added"); }} />
+            </label>
+          ) : null}
+
+          {/* ---- contextual actions ---- */}
+          {bettable && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={side === "YES" ? "default" : "outline"} className={cn("tactile h-11 active:scale-95", side === "YES" && "bg-yes text-black hover:bg-yes/90")} onClick={() => { setSide("YES"); haptic("select"); }}>YES</Button>
+                <Button type="button" variant={side === "NO" ? "default" : "outline"} className={cn("tactile h-11 active:scale-95", side === "NO" && "bg-no text-white hover:bg-no/90")} onClick={() => { setSide("NO"); haptic("select"); }}>NO</Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="icon" variant="outline" className="tap-target tactile active:scale-90" onClick={() => { setAmt(amount - 10); haptic("tap"); }}><Minus className="size-4" /></Button>
+                <Input inputMode="numeric" className="h-11 text-center text-lg font-bold tabular-nums" value={amount} onChange={(e) => setAmt(Number(e.target.value) || 0)} />
+                <Button type="button" size="icon" variant="outline" className="tap-target tactile active:scale-90" onClick={() => { setAmt(amount + 10); haptic("tap"); }}><Plus className="size-4" /></Button>
+                <Button type="button" size="icon" variant="outline" className="tap-target tactile text-muted-foreground active:scale-90" onClick={() => { setAmt(0); haptic("tap"); }}><RotateCcw className="size-4" /></Button>
+              </div>
+              <div className="flex gap-2">
+                {[25, 50, 100].map((v) => (
+                  <Button key={v} type="button" variant="outline" size="sm" className="tactile flex-1 active:scale-95" onClick={() => { setAmt(amount + v); haptic("tap"); }}>+{v}</Button>
+                ))}
+              </div>
+              <label className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                <Switch checked={anon} onCheckedChange={(v) => { setAnon(v); haptic("select"); }} />
+                <Lock className="size-3.5" /> Bet anonymously
+              </label>
+              <Button disabled={busy || amount <= 0} className={cn("tactile h-11 w-full active:scale-95", side === "YES" ? "bg-yes text-black hover:bg-yes/90" : "bg-no text-white hover:bg-no/90")}
+                onClick={() => act(() => api("POST", `/markets/${market.id}/bets`, { side, amount: String(amount), anonymous: anon }), `Bet ${fmt(amount)} on ${side}`)}>
+                Bet {side}
+              </Button>
+            </div>
+          )}
+
+          {ci.closed && (market.status === "OPEN" || market.status === "CLOSED") && (
+            isProposer ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">You proposed this — mark the result. A dispute window opens after.</p>
+                <div className="flex gap-2">
+                  <Button className="tactile h-11 flex-1 bg-yes text-black hover:bg-yes/90 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "YES" }), "Marked YES")}>YES won</Button>
+                  <Button className="tactile h-11 flex-1 bg-no text-white hover:bg-no/90 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "NO" }), "Marked NO")}>NO won</Button>
+                  <Button variant="outline" className="tactile h-11 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "VOID" }), "Voided")}>Void</Button>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="mb-2 flex justify-between text-sm"><span>Split result — YES share</span><span className="font-bold tabular-nums">{pct}%</span></div>
+                  <Slider value={[pct]} min={0} max={100} step={1} onValueChange={(v) => { setPct(v[0]); haptic("select"); }} />
+                  <Button variant="outline" className="tactile mt-3 w-full active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "SCALAR", yes_percent: pct }), `Marked YES ${pct}%`)}>Settle at split %</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">Betting closed. Waiting for the proposer to resolve.</div>
+            )
+          )}
+
+          {market.status === "RESOLVING" && (
+            <div className="space-y-3">
+              <div className="flex justify-between rounded-lg bg-secondary p-3 text-sm"><span>Proposed outcome</span><b>{market.proposed_outcome}</b></div>
+              <Input placeholder="Reason to dispute" value={reason} onChange={(e) => setReason(e.target.value)} />
+              <div className="flex gap-2">
+                <Button variant="outline" className="tactile flex-1 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/dispute`, { reason: reason || "disputed" }), "Disputed")}>Dispute</Button>
+                <Button className="tactile flex-1 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/settle`), "Settled")}>Settle now</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{isProposer ? "As proposer you can settle now, skipping the window." : "“Settle now” works once the window elapses."}</p>
+            </div>
+          )}
+
+          {market.status === "DISPUTED" && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Disputed — vote the outcome.</p>
+              <div className="flex gap-2">
+                {(["YES", "NO", "VOID"] as const).map((c) => (
+                  <Button key={c} variant="outline" className="tactile flex-1 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/vote`, { choice: c }), `Voted ${c}`)}>{c}</Button>
+                ))}
+              </div>
+              <Button className="tactile w-full active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/settle`), "Settled")}>Tally &amp; settle</Button>
+            </div>
+          )}
+
+          {market.status === "RESOLVED" && (
+            <div className="flex justify-between rounded-lg bg-secondary p-3">
+              <span>Final outcome</span>
+              <b className={market.outcome === "YES" ? "text-yes" : market.outcome === "NO" ? "text-no" : ""}>
+                {market.outcome === "SCALAR" && market.outcome_fraction != null ? `YES ${Math.round(Number(market.outcome_fraction) * 100)}% / NO ${100 - Math.round(Number(market.outcome_fraction) * 100)}%` : market.outcome}
+              </b>
+            </div>
+          )}
+
+          {/* ---- bets + action cards ---- */}
+          <div className="mt-5">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Bets</div>
+            {market.bets.length === 0 ? (
+              <p className="py-2 text-sm text-muted-foreground">No bets yet.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {market.bets.map((b) => (
+                  <div key={b.id} className="flex items-center justify-between border-t py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span>{b.member_name}</span>
+                      {b.is_anonymous && <span className="rounded border px-1 text-[9px] uppercase text-muted-foreground">anon</span>}
+                      <b className={b.side === "YES" ? "text-yes" : "text-no"}>{b.side}</b>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="tabular-nums">{fmt(b.amount)}{b.payout != null && <> → <b>{fmt(b.payout)}</b></>}</span>
+                      {bettable && (
+                        <div className="flex gap-1">
+                          <button className="tap-target tactile rounded p-1 text-muted-foreground hover:text-yes active:scale-90" title="Match" onClick={() => match(b)}><Copy className="size-3.5" /></button>
+                          <button className="tap-target tactile rounded p-1 text-muted-foreground hover:text-no active:scale-90" title="Fade (go against)" onClick={() => fade(b)}><Swords className="size-3.5" /></button>
+                          <button className="tap-target tactile rounded p-1 text-muted-foreground hover:text-primary active:scale-90" title="Raise" onClick={() => raise(b)}><TrendingUp className="size-3.5" /></button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

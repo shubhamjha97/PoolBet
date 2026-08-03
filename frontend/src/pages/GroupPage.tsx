@@ -1,11 +1,110 @@
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Copy, Link2, Plus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { api, ApiError } from "@/lib/api";
+import type { AccessRequest, Group, Market } from "@/lib/types";
+import { fmt } from "@/lib/format";
+import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MarketsTab } from "@/components/market/MarketsTab";
+import { StatsTab } from "@/components/group/StatsTab";
+import { TimelineTab } from "@/components/group/TimelineTab";
+
+function rememberGroup(id: string) {
+  try {
+    const ids: string[] = JSON.parse(localStorage.getItem("pb_groups") || "[]");
+    if (!ids.includes(id)) localStorage.setItem("pb_groups", JSON.stringify([...ids, id]));
+  } catch { /* ignore */ }
+}
 
 export function GroupPage() {
-  const { id } = useParams();
+  const { id = "" } = useParams();
+  const [params] = useSearchParams();
+  const { user } = useAuth();
+  const [group, setGroup] = useState<Group | null>(null);
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [requests, setRequests] = useState<AccessRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [g, m] = await Promise.all([
+        api<Group>("GET", `/groups/${id}`),
+        api<Market[]>("GET", `/groups/${id}/markets`),
+      ]);
+      setGroup(g);
+      setMarkets(m);
+      // owner-only; 403 for members → ignore
+      try { setRequests(await api<AccessRequest[]>("GET", `/groups/${id}/access-requests`)); } catch { setRequests([]); }
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Could not load group");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => { rememberGroup(id); refresh(); }, [id, refresh]);
+
+  if (loading) return <div className="flex justify-center py-16 text-muted-foreground"><Loader2 className="size-5 animate-spin" /></div>;
+  if (!group) return <div className="text-muted-foreground">Group not found.</div>;
+
+  const me = group.members.find((m) => m.user_id === user?.id);
+
+  const buyIn = () => api("POST", `/groups/${id}/buy-in`).then(() => { toast.success("Bought in"); haptic("success"); refresh(); }).catch((e) => toast.error(e.message));
+  const approve = (reqId: string) => api("POST", `/groups/${id}/access-requests/${reqId}/approve`).then(() => { toast.success("Approved"); refresh(); }).catch((e) => toast.error(e.message));
+  const copy = (text: string, label: string) => { navigator.clipboard.writeText(text); toast.success(label); haptic("select"); };
+
   return (
-    <div className="animate-fade-up space-y-3">
-      <h1 className="text-2xl font-semibold tracking-tight">Group</h1>
-      <p className="text-muted-foreground">Rebuilding group {id} (markets, stats, timeline)…</p>
+    <div className="animate-fade-up space-y-5">
+      <div>
+        <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> groups</Link>
+        <div className="mt-2 flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{group.name}</h1>
+          <div className="shrink-0 text-right">
+            <div className="text-xs text-muted-foreground">your balance</div>
+            <div className="text-2xl font-bold tabular-nums">{me ? fmt(me.balance) : "—"}</div>
+            <Button variant="outline" size="sm" className="tactile mt-1 active:scale-95" onClick={buyIn}><Plus className="size-3.5" /> Buy in</Button>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted-foreground">invite code</span>
+          <span className="rounded-md border bg-secondary px-2.5 py-1 font-mono tracking-widest text-primary">{group.invite_code}</span>
+          <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(group.invite_code, "Code copied")}><Copy className="size-3.5" /> Code</Button>
+          <Button variant="ghost" size="sm" className="tactile active:scale-95" onClick={() => copy(`${location.origin}/next/#/group/${id}`, "Link copied")}><Link2 className="size-3.5" /> Link</Button>
+        </div>
+      </div>
+
+      {requests.length > 0 && (
+        <div className="rounded-xl border border-primary/30 p-4">
+          <div className="mb-2 text-sm font-semibold">Access requests ({requests.length})</div>
+          {requests.map((r) => (
+            <div key={r.id} className="flex items-center justify-between border-t py-2 first:border-0">
+              <span>{r.name}</span>
+              <Button size="sm" className="tactile active:scale-95" onClick={() => approve(r.id)}>Approve</Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Tabs defaultValue={params.get("market") ? "markets" : "markets"}>
+        <TabsList className="w-full">
+          <TabsTrigger value="markets" className="flex-1">Markets</TabsTrigger>
+          <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
+          <TabsTrigger value="timeline" className="flex-1">Timeline</TabsTrigger>
+        </TabsList>
+        <TabsContent value="markets" className="mt-4">
+          <MarketsTab group={group} markets={markets} onRefresh={refresh} openMarketId={params.get("market")} />
+        </TabsContent>
+        <TabsContent value="stats" className="mt-4">
+          <StatsTab group={group} markets={markets} />
+        </TabsContent>
+        <TabsContent value="timeline" className="mt-4">
+          <TimelineTab groupId={id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

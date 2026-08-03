@@ -6,10 +6,12 @@ import type { Group, Market } from "@/lib/types";
 import { haptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 import { MarketCard } from "./MarketCard";
+import { Plus as PlusIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -28,6 +30,8 @@ export function MarketsTab({ group, markets, onRefresh, openMarketId }: { group:
   const [closes, setCloses] = useState(localDT(24));
   const [preset, setPreset] = useState("1d");
   const [busy, setBusy] = useState(false);
+  const [multi, setMulti] = useState(false);
+  const [outcomes, setOutcomes] = useState<string[]>(["", ""]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -39,14 +43,17 @@ export function MarketsTab({ group, markets, onRefresh, openMarketId }: { group:
     if (question.trim().length < 3) return toast.error("Give the market a question");
     setBusy(true);
     haptic("tap");
+    const labels = outcomes.map((s) => s.trim()).filter(Boolean);
+    if (multi && new Set(labels).size < 2) { setBusy(false); return toast.error("Add at least 2 distinct outcomes"); }
     try {
       await api("POST", `/groups/${group.id}/markets`, {
         question: question.trim(),
         rules: rules.trim() || null,
         closes_at: new Date(closes).toISOString(),
+        outcomes: multi ? labels : null,
       });
       haptic("success");
-      setNewOpen(false); setQuestion(""); setRules("");
+      setNewOpen(false); setQuestion(""); setRules(""); setMulti(false); setOutcomes(["", ""]);
       onRefresh();
     } catch (e) {
       haptic("warn");
@@ -83,9 +90,35 @@ export function MarketsTab({ group, markets, onRefresh, openMarketId }: { group:
           <DialogHeader><DialogTitle>New market</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Question (YES / NO)</Label>
-              <Input placeholder="Will the Chiefs cover the spread?" value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={280} />
+              <Label>{multi ? "Question" : "Question (YES / NO)"}</Label>
+              <Input placeholder={multi ? "Who drives the first leg?" : "Will the Chiefs cover the spread?"} value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={280} />
             </div>
+
+            <label className="flex items-center justify-between rounded-lg border p-3">
+              <span className="text-sm"><span className="font-medium">Multiple choice</span><span className="ml-2 text-xs text-muted-foreground">pick from named outcomes</span></span>
+              <Switch checked={multi} onCheckedChange={(v) => { setMulti(v); haptic("select"); }} />
+            </label>
+
+            {multi && (
+              <div className="space-y-2">
+                <Label>Outcomes</Label>
+                {outcomes.map((o, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input placeholder={`Outcome ${i + 1}`} value={o} maxLength={60}
+                      onChange={(e) => setOutcomes((prev) => prev.map((x, j) => (j === i ? e.target.value : x)))} />
+                    {outcomes.length > 2 && (
+                      <Button type="button" variant="ghost" size="icon" className="tap-target shrink-0"
+                        onClick={() => { setOutcomes((prev) => prev.filter((_, j) => j !== i)); haptic("tap"); }}><X className="size-4" /></Button>
+                    )}
+                  </div>
+                ))}
+                {outcomes.length < 8 && (
+                  <Button type="button" variant="outline" size="sm" className="tactile active:scale-95"
+                    onClick={() => { setOutcomes((prev) => [...prev, ""]); haptic("select"); }}><PlusIcon className="size-3.5" /> Add outcome</Button>
+                )}
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label>Rules / how it resolves (optional)</Label>
               <Textarea placeholder="e.g. Resolves YES if the final margin is 3+ points." value={rules} onChange={(e) => setRules(e.target.value)} maxLength={2000} />

@@ -41,15 +41,21 @@ def make_group(owner, name, members, dispute_hours=0, credits="1000"):
     return g
 
 
-def make_market(gid, owner, question, hours, rules=None):
+def make_market(gid, owner, question, hours, rules=None, outcomes=None):
     body = {"question": question, "closes_at": (datetime.now(timezone.utc) + timedelta(hours=hours)).isoformat()}
     if rules:
         body["rules"] = rules
+    if outcomes:
+        body["outcomes"] = outcomes
     return c.post(f"/groups/{gid}/markets", json=body, headers=h(owner)).json()["id"]
 
 
 def bet(mid, name, side, amt, anon=False):
     c.post(f"/markets/{mid}/bets", json={"side": side, "amount": str(amt), "anonymous": anon}, headers=h(name))
+
+
+def bet_mc(mid, name, outcome, amt, anon=False):
+    c.post(f"/markets/{mid}/bets", json={"outcome": outcome, "amount": str(amt), "anonymous": anon}, headers=h(name))
 
 
 def resolve(mid, owner, outcome, pct=None):
@@ -99,8 +105,31 @@ def main():
     m = make_market(g3["id"], "Ava", "Return-to-office 5 days a week next quarter?", 96)
     bet(m, "Dee", "NO", 200); bet(m, "Gus", "NO", 150); bet(m, "Hana", "YES", 80); bet(m, "Ava", "YES", 60)
 
-    print("groups: Test League (8), Degens (4), Office Pool (4)")
-    print("markets: 8 (2 resolved, 1 scalar-resolved); ~30 bets incl. anonymous")
+    # ---- Group 4: Road Trip (multiple-choice markets) ----
+    g4 = make_group("Cy", "Road Trip 🚗", ["Ava", "Ben", "Cy", "Dee", "Eve"], dispute_hours=0)
+    # open multiple-choice markets
+    m1 = make_market(g4["id"], "Cy", "Who drives the first leg?", 48, outcomes=["Ava", "Ben", "Cy", "Dee"])
+    bet_mc(m1, "Ava", "Ben", 120); bet_mc(m1, "Ben", "Ben", 60); bet_mc(m1, "Cy", "Ava", 90)
+    bet_mc(m1, "Dee", "Dee", 40, anon=True); bet_mc(m1, "Eve", "Cy", 70)
+    m2 = make_market(g4["id"], "Cy", "What time do we ACTUALLY leave?", 24,
+                     outcomes=["Before 8am", "8–10am", "10am–12pm", "After 12pm"])
+    bet_mc(m2, "Ava", "8–10am", 80); bet_mc(m2, "Ben", "After 12pm", 150)
+    bet_mc(m2, "Dee", "10am–12pm", 100); bet_mc(m2, "Eve", "After 12pm", 60)
+    m3 = make_market(g4["id"], "Cy", "Best road-trip snack?", 72,
+                     outcomes=["Chips", "Candy", "Jerky", "Fruit"])
+    bet_mc(m3, "Ava", "Jerky", 50); bet_mc(m3, "Ben", "Chips", 40); bet_mc(m3, "Eve", "Candy", 55)
+    # a binary one for variety
+    mb = make_market(g4["id"], "Cy", "Will we get a speeding ticket?", 60)
+    bet(mb, "Ben", "YES", 30); bet(mb, "Dee", "NO", 90, anon=True); bet(mb, "Ava", "NO", 50)
+    # a resolved multiple-choice market
+    mr4 = make_market(g4["id"], "Cy", "Who picked the aux first?", 0.0002,
+                      outcomes=["Ava", "Ben", "Cy", "Dee"])
+    bet_mc(mr4, "Ava", "Ava", 100); bet_mc(mr4, "Ben", "Cy", 60); bet_mc(mr4, "Dee", "Ava", 40)
+    time.sleep(2.0)
+    resolve(mr4, "Cy", "Ava")
+
+    print("groups: Test League (8), Degens (4), Office Pool (4), Road Trip (5)")
+    print("markets: 13 incl. 4 multiple-choice; ~45 bets incl. anonymous")
 
     lines = [
         "# PoolBet — Test Accounts", "",

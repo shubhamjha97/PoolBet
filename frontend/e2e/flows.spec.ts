@@ -55,6 +55,29 @@ test.describe("core flows", () => {
     await expect(page.getByText(gname)).toBeVisible();
   });
 
+  test("create a multiple-choice market and bet on an outcome", async ({ page }) => {
+    await signup(page, rand("MC-"));
+    await createGroup(page, rand("Grp-"));
+
+    await page.getByRole("button", { name: /^New$/ }).click();
+    const dlg = page.getByRole("dialog");
+    await dlg.getByRole("textbox").first().fill("Who wins the race?");
+    await dlg.getByRole("switch").click(); // enable Multiple choice
+    const outs = dlg.getByPlaceholder(/^Outcome/);
+    await outs.nth(0).fill("Alpha");
+    await outs.nth(1).fill("Beta");
+    await dlg.getByRole("button", { name: /^Create$/ }).click();
+
+    const card = page.locator("text=Who wins the race?").first();
+    await expect(card).toBeVisible();
+    await card.click();
+    await page.getByRole("button", { name: "Alpha", exact: true }).first().click();
+    await page.getByRole("button", { name: "+100" }).click();
+    await page.getByRole("slider", { name: /Slide to bet/ }).press("Enter");
+
+    await expect(page.getByText(/pot 100/).first()).toBeVisible();
+  });
+
   test("post a comment in the live feed (streams back via SSE)", async ({ page }) => {
     await signup(page, rand("E2E-"));
     await createGroup(page, rand("Grp-"));

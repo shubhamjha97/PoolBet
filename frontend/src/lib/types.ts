@@ -29,12 +29,20 @@ export type MarketStatus = "OPEN" | "CLOSED" | "RESOLVING" | "DISPUTED" | "RESOL
 
 export interface Bet {
   id: string;
-  side: Side;
+  side: Side | null;
+  outcome: string | null;   // chosen label on multiple-choice markets
   amount: string;
   payout: string | null;
   member_name: string;
   is_anonymous: boolean;
   created_at: string;
+}
+
+export interface OutcomePool {
+  label: string;
+  pool: string;
+  pct: string | null;
+  count: number;
 }
 
 export interface Market {
@@ -50,9 +58,11 @@ export interface Market {
   no_pool: string;
   yes_prob: string | null;
   no_prob: string | null;
-  proposed_outcome: Outcome | null;
+  outcomes: string[] | null;          // null -> binary YES/NO; list -> multiple choice
+  outcome_pools: OutcomePool[];       // per-label pools for multiple-choice markets
+  proposed_outcome: Outcome | string | null;
   proposed_fraction: string | null;
-  outcome: Outcome | null;
+  outcome: Outcome | string | null;
   outcome_fraction: string | null;
   evidence_url: string | null;
   bets: Bet[];

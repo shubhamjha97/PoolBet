@@ -51,8 +51,10 @@ function AnimatedOddsBar({ yesPct, total }: { yesPct: number; total: number }) {
 
 export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market; onRefresh: () => void; defaultOpen?: boolean }) {
   const { user } = useAuth();
+  const isMulti = !!market.outcomes?.length;
   const [open, setOpen] = useState(!!defaultOpen);
   const [side, setSide] = useState<Side>("YES");
+  const [pick, setPick] = useState<string>(market.outcomes?.[0] ?? "");
   const [amount, setAmount] = useState(0);
   const [anon, setAnon] = useState(false);
   const [pct, setPct] = useState(50);
@@ -60,7 +62,8 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
   const [busy, setBusy] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
-  const { total, yes } = poolPct(market);
+  const { total: binaryTotal, yes } = poolPct(market);
+  const total = isMulti ? market.outcome_pools.reduce((s, o) => s + Number(o.pool), 0) : binaryTotal;
   const ci = closesInfo(market.closes_at);
   const isProposer = market.proposer_user_id === user?.id;
   const bettable = market.status === "OPEN" && !ci.closed;
@@ -84,9 +87,9 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
   const setAmt = (v: number) => setAmount(Math.max(0, Math.round(v)));
 
   // action cards: seed the bet form from an existing bet
-  const match = (b: Bet) => { setSide(b.side); setAmt(Number(b.amount)); setOpen(true); haptic("select"); };
+  const match = (b: Bet) => { if (b.side) setSide(b.side); if (b.outcome) setPick(b.outcome); setAmt(Number(b.amount)); setOpen(true); haptic("select"); };
   const fade = (b: Bet) => { setSide(b.side === "YES" ? "NO" : "YES"); setAmt(Number(b.amount)); haptic("select"); };
-  const raise = (b: Bet) => { setSide(b.side); setAmt(Math.round(Number(b.amount) * 1.5)); haptic("select"); };
+  const raise = (b: Bet) => { if (b.side) setSide(b.side); if (b.outcome) setPick(b.outcome); setAmt(Math.round(Number(b.amount) * 1.5)); haptic("select"); };
 
   const openShare = (e: MouseEvent) => {
     e.stopPropagation();
@@ -109,13 +112,31 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
             </span>
           </div>
         </div>
-        <div className="mt-3">
-          <div className="mb-1.5 flex justify-between font-mono text-xs font-bold">
-            <span className="text-yes">YES {total > 0 ? yes + "%" : "—"}</span>
-            <span className="text-no">{total > 0 ? 100 - yes + "%" : "—"} NO</span>
+        {isMulti ? (
+          <div className="mt-3 space-y-1">
+            {market.outcome_pools.slice(0, 3).map((o) => {
+              const p = o.pct ? Math.round(Number(o.pct) * 100) : 0;
+              return (
+                <div key={o.label} className="flex items-center gap-2 text-xs">
+                  <span className="w-20 shrink-0 truncate font-medium">{o.label}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800/80">
+                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400" style={{ width: `${p}%` }} />
+                  </div>
+                  <span className="w-8 shrink-0 text-right font-mono tabular-nums text-muted-foreground">{p}%</span>
+                </div>
+              );
+            })}
+            {market.outcomes!.length > 3 && <div className="pl-20 text-[11px] text-muted-foreground">+{market.outcomes!.length - 3} more</div>}
           </div>
-          <AnimatedOddsBar yesPct={total > 0 ? yes : 50} total={total} />
-        </div>
+        ) : (
+          <div className="mt-3">
+            <div className="mb-1.5 flex justify-between font-mono text-xs font-bold">
+              <span className="text-yes">YES {total > 0 ? yes + "%" : "—"}</span>
+              <span className="text-no">{total > 0 ? 100 - yes + "%" : "—"} NO</span>
+            </div>
+            <AnimatedOddsBar yesPct={total > 0 ? yes : 50} total={total} />
+          </div>
+        )}
         <div className="mt-2.5 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
           <span>{market.status === "RESOLVED" ? `resolved · ${market.outcome}` : ci.text} · pot {fmt(total)}</span>
           <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
@@ -152,10 +173,18 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
           {/* ---- contextual actions ---- */}
           {bettable && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant={side === "YES" ? "default" : "outline"} className={cn("tactile h-11 active:scale-95", side === "YES" && "bg-yes text-black hover:bg-yes/90")} onClick={() => { setSide("YES"); haptic("select"); }}>YES</Button>
-                <Button type="button" variant={side === "NO" ? "default" : "outline"} className={cn("tactile h-11 active:scale-95", side === "NO" && "bg-no text-white hover:bg-no/90")} onClick={() => { setSide("NO"); haptic("select"); }}>NO</Button>
-              </div>
+              {isMulti ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {market.outcomes!.map((o) => (
+                    <Button key={o} type="button" variant={pick === o ? "default" : "outline"} className={cn("tactile h-11 active:scale-95", pick === o && "bg-primary text-primary-foreground")} onClick={() => { setPick(o); haptic("select"); }}>{o}</Button>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant={side === "YES" ? "default" : "outline"} className={cn("tactile h-11 active:scale-95", side === "YES" && "bg-yes text-black hover:bg-yes/90")} onClick={() => { setSide("YES"); haptic("select"); }}>YES</Button>
+                  <Button type="button" variant={side === "NO" ? "default" : "outline"} className={cn("tactile h-11 active:scale-95", side === "NO" && "bg-no text-white hover:bg-no/90")} onClick={() => { setSide("NO"); haptic("select"); }}>NO</Button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Button type="button" size="icon" variant="outline" className="tap-target tactile active:scale-90" onClick={() => { setAmt(amount - 10); haptic("tap"); }}><Minus className="size-4" /></Button>
                 <Input inputMode="numeric" className="h-11 text-center font-mono text-lg font-bold tabular-nums" value={amount} onChange={(e) => setAmt(Number(e.target.value) || 0)} />
@@ -171,12 +200,21 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
                 <Switch checked={anon} onCheckedChange={(v) => { setAnon(v); haptic("select"); }} />
                 <Lock className="size-3.5" /> Bet anonymously
               </label>
-              <SlideToConfirm
-                disabled={busy || amount <= 0}
-                label={`Slide to bet ${fmt(amount)} on ${side}`}
-                colorClass={side === "YES" ? "bg-yes text-black" : "bg-no text-white"}
-                onConfirm={() => act(() => api("POST", `/markets/${market.id}/bets`, { side, amount: String(amount), anonymous: anon }, { "Idempotency-Key": crypto.randomUUID() }), `Bet ${fmt(amount)} on ${side}`)}
-              />
+              {isMulti ? (
+                <SlideToConfirm
+                  disabled={busy || amount <= 0 || !pick}
+                  label={`Slide to bet ${fmt(amount)} on ${pick || "…"}`}
+                  colorClass="bg-primary text-primary-foreground"
+                  onConfirm={() => act(() => api("POST", `/markets/${market.id}/bets`, { outcome: pick, amount: String(amount), anonymous: anon }, { "Idempotency-Key": crypto.randomUUID() }), `Bet ${fmt(amount)} on ${pick}`)}
+                />
+              ) : (
+                <SlideToConfirm
+                  disabled={busy || amount <= 0}
+                  label={`Slide to bet ${fmt(amount)} on ${side}`}
+                  colorClass={side === "YES" ? "bg-yes text-black" : "bg-no text-white"}
+                  onConfirm={() => act(() => api("POST", `/markets/${market.id}/bets`, { side, amount: String(amount), anonymous: anon }, { "Idempotency-Key": crypto.randomUUID() }), `Bet ${fmt(amount)} on ${side}`)}
+                />
+              )}
             </div>
           )}
 
@@ -184,16 +222,27 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
             isProposer ? (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground">You proposed this — mark the result. A dispute window opens after.</p>
-                <div className="flex gap-2">
-                  <Button className="tactile h-11 flex-1 bg-yes text-black hover:bg-yes/90 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "YES" }), "Marked YES")}>YES won</Button>
-                  <Button className="tactile h-11 flex-1 bg-no text-white hover:bg-no/90 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "NO" }), "Marked NO")}>NO won</Button>
-                  <Button variant="outline" className="tactile h-11 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "VOID" }), "Voided")}>Void</Button>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <div className="mb-2 flex justify-between text-sm"><span>Split result — YES share</span><span className="font-bold tabular-nums">{pct}%</span></div>
-                  <Slider value={[pct]} min={0} max={100} step={1} onValueChange={(v) => { setPct(v[0]); haptic("select"); }} />
-                  <Button variant="outline" className="tactile mt-3 w-full active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "SCALAR", yes_percent: pct }), `Marked YES ${pct}%`)}>Settle at split %</Button>
-                </div>
+                {isMulti ? (
+                  <div className="flex flex-wrap gap-2">
+                    {market.outcomes!.map((o) => (
+                      <Button key={o} className="tactile h-11 flex-1 basis-[calc(50%-0.25rem)] active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: o }), `Marked ${o}`)}>{o} won</Button>
+                    ))}
+                    <Button variant="outline" className="tactile h-11 w-full active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "VOID" }), "Voided")}>Void (refund all)</Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <Button className="tactile h-11 flex-1 bg-yes text-black hover:bg-yes/90 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "YES" }), "Marked YES")}>YES won</Button>
+                      <Button className="tactile h-11 flex-1 bg-no text-white hover:bg-no/90 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "NO" }), "Marked NO")}>NO won</Button>
+                      <Button variant="outline" className="tactile h-11 active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "VOID" }), "Voided")}>Void</Button>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <div className="mb-2 flex justify-between text-sm"><span>Split result — YES share</span><span className="font-bold tabular-nums">{pct}%</span></div>
+                      <Slider value={[pct]} min={0} max={100} step={1} onValueChange={(v) => { setPct(v[0]); haptic("select"); }} />
+                      <Button variant="outline" className="tactile mt-3 w-full active:scale-95" disabled={busy} onClick={() => act(() => api("POST", `/markets/${market.id}/resolve`, { outcome: "SCALAR", yes_percent: pct }), `Marked YES ${pct}%`)}>Settle at split %</Button>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="rounded-lg border border-dashed py-6 text-center text-sm text-muted-foreground">Betting closed. Waiting for the proposer to resolve.</div>
@@ -245,7 +294,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
                     <div className="flex items-center gap-2">
                       <span>{b.member_name}</span>
                       {b.is_anonymous && <span className="rounded border px-1 text-[9px] uppercase text-muted-foreground">anon</span>}
-                      <b className={b.side === "YES" ? "text-yes" : "text-no"}>{b.side}</b>
+                      <b className={b.outcome ? "text-primary" : b.side === "YES" ? "text-yes" : "text-no"}>{b.outcome ?? b.side}</b>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-mono tabular-nums">{fmt(b.amount)}{b.payout != null && <> → <b>{fmt(b.payout)}</b></>}</span>

@@ -4,10 +4,11 @@ import { ArrowLeft, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { AdminEvent, Snapshot } from "@/lib/types";
-import { fmt, timeAgo } from "@/lib/format";
+import { count, fmt, timeAgo } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { MultiLineChart } from "@/components/Charts";
 import {
@@ -85,13 +86,31 @@ export function AdminPage() {
   const [rake, setRake] = useState(0); // fraction, e.g. 0.01 = 1%
   const [savingRake, setSavingRake] = useState(false);
 
+  // Commit-log pagination + datetime filtering.
+  const PAGE_SIZE = 25;
+  const [page, setPage] = useState(0);
+  const [start, setStart] = useState(""); // datetime-local value, e.g. 2026-08-02T14:30
+  const [end, setEnd] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+
   const load = useCallback(async () => {
     try { setSnaps(await api<Snapshot[]>("GET", "/admin/snapshots")); } catch { setSnaps([]); }
-    try { setEvents(await api<AdminEvent[]>("GET", "/admin/events?limit=100")); } catch { setEvents([]); }
     try { setMetrics(await api<Metrics>("GET", "/admin/metrics")); } catch { setMetrics(null); }
     try { setRake((await api<Settings>("GET", "/admin/settings")).house_rake); } catch { /* keep default */ }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  const loadEvents = useCallback(async () => {
+    const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
+    if (start) params.set("start", start);
+    if (end) params.set("end", end);
+    try {
+      const rows = await api<AdminEvent[]>("GET", `/admin/events?${params}`);
+      setEvents(rows);
+      setHasMore(rows.length === PAGE_SIZE);
+    } catch { setEvents([]); setHasMore(false); }
+  }, [page, start, end]);
+  useEffect(() => { loadEvents(); }, [loadEvents]);
 
   async function saveRake() {
     setSavingRake(true);
@@ -115,7 +134,8 @@ export function AdminPage() {
       await api("POST", "/admin/rollback", { snapshot_id: confirm.id });
       toast.success("Rolled back");
       setConfirm(null);
-      await load();
+      setPage(0);
+      await Promise.all([load(), loadEvents()]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Rollback failed");
     } finally {
@@ -138,11 +158,11 @@ export function AdminPage() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Kpi label="Users" value={fmt(metrics.users)} />
-              <Kpi label="Active 7d" value={fmt(metrics.active_users_7d)} />
-              <Kpi label="Bets" value={fmt(metrics.bets)} />
+              <Kpi label="Users" value={count(metrics.users)} />
+              <Kpi label="Active 7d" value={count(metrics.active_users_7d)} />
+              <Kpi label="Bets" value={count(metrics.bets)} />
               <Kpi label="Total volume" value={fmt(metrics.total_volume)} />
-              <Kpi label="App opens" value={fmt(metrics.app_opens)} />
+              <Kpi label="App opens" value={count(metrics.app_opens)} />
               <Kpi label="Session time" value={humanizeSecs(metrics.session_seconds)} />
               <Kpi label="House earnings" value={fmt(metrics.house_earnings)} />
             </div>
@@ -213,8 +233,27 @@ export function AdminPage() {
 
       <div>
         <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Commit log</div>
+
+        {/* datetime range filter */}
+        <div className="mb-3 flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+            From
+            <Input type="datetime-local" value={start} className="h-8 w-[13.5rem]"
+              onChange={(e) => { setStart(e.target.value); setPage(0); }} />
+          </label>
+          <label className="flex flex-col gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+            To
+            <Input type="datetime-local" value={end} className="h-8 w-[13.5rem]"
+              onChange={(e) => { setEnd(e.target.value); setPage(0); }} />
+          </label>
+          {(start || end) && (
+            <Button variant="outline" size="sm" className="tactile active:scale-95"
+              onClick={() => { setStart(""); setEnd(""); setPage(0); }}>Clear</Button>
+          )}
+        </div>
+
         {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Empty.</p>
+          <p className="text-sm text-muted-foreground">{start || end ? "No events in this range." : "Empty."}</p>
         ) : (
           <div className="space-y-0">
             {events.map((e, i) => (
@@ -227,6 +266,17 @@ export function AdminPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* pagination */}
+        {(page > 0 || hasMore) && (
+          <div className="mt-2 flex items-center justify-between">
+            <Button variant="outline" size="sm" className="tactile active:scale-95"
+              disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>Newer</Button>
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">page {page + 1}</span>
+            <Button variant="outline" size="sm" className="tactile active:scale-95"
+              disabled={!hasMore} onClick={() => setPage((p) => p + 1)}>Older</Button>
           </div>
         )}
       </div>

@@ -1,8 +1,13 @@
 // Shared formatting + odds helpers used across market/stat views.
 import type { Bet, Market } from "./types";
 
+// Money — credits are fractional; always show exactly 2 decimals.
 export const fmt = (v: string | number) =>
-  Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Whole-number counts (users, bets, …) — thousands separator, no decimals.
+export const count = (v: string | number) =>
+  Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 export function closesInfo(iso: string) {
   const ms = new Date(iso).getTime() - Date.now();

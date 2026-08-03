@@ -1,4 +1,4 @@
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -44,19 +44,40 @@ def admin_me(user: User = Depends(current_user)):
     return AdminMeOut(is_admin=user.is_admin)
 
 
+def _parse_dt(label: str, value: str) -> datetime:
+    """Parse an ISO datetime (from a datetime-local input) to naive UTC to match
+    the stored, tz-stripped timestamps."""
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"invalid {label} datetime")
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 @router.get("/events", response_model=list[AdminEventOut])
 def admin_events(
     limit: int = 100,
     offset: int = 0,
+    start: str | None = None,
+    end: str | None = None,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
 ):
-    """Newest-first slice of the global commit log."""
+    """Newest-first slice of the global commit log, with optional [start, end]
+    datetime filtering (inclusive) and offset pagination."""
     limit = max(1, min(limit, 500))
-    rows = db.execute(
+    q = (
         select(Event, User)
         .join(User, User.id == Event.actor_user_id, isouter=True)
-        .order_by(Event.ts.desc(), Event.id.desc())
+    )
+    if start:
+        q = q.where(Event.ts >= _parse_dt("start", start))
+    if end:
+        q = q.where(Event.ts <= _parse_dt("end", end))
+    rows = db.execute(
+        q.order_by(Event.ts.desc(), Event.id.desc())
         .limit(limit)
         .offset(max(0, offset))
     ).all()

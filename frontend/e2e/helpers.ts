@@ -2,6 +2,15 @@ import { expect, type Page } from "@playwright/test";
 
 export const rand = (p: string) => `${p}${Math.random().toString(36).slice(2, 7)}`;
 
+export async function login(page: Page, name: string, password = "test1234") {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Log in", exact: true }).click(); // landing toggle
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Log in", exact: true }).last().click(); // submit
+  await expect(page.getByRole("heading", { name: "Your groups" })).toBeVisible();
+}
+
 export async function signup(page: Page, name: string) {
   await page.goto("/");
   await page.getByRole("button", { name: "Get started" }).click();

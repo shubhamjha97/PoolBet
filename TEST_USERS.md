@@ -14,8 +14,8 @@ Server: http://localhost:8000  ·  all passwords: `test1234`
 | Hana | test1234 | member |
 
 ## Groups
-- **Test League** — all 8 users · code `DG5M4V` · open + resolved markets
-- **Degens** — Ben, Cy, Eve, Finn · code `B3FJQ9`
-- **Office Pool** — Ava, Dee, Gus, Hana · code `6JNKBA`
+- **Test League** — all 8 users · code `F9NTRD` · open + resolved markets
+- **Degens** — Ben, Cy, Eve, Finn · code `XUX73X`
+- **Office Pool** — Ava, Dee, Gus, Hana · code `993SWZ`
 
 Log in at the server URL with any name + the password.

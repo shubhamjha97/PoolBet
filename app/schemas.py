@@ -258,3 +258,16 @@ class SettlementTransfer(BaseModel):
 class SettlementOut(BaseModel):
     net: list[SettlementNet]
     transfers: list[SettlementTransfer]
+    house_take: float = 0.0  # total rake the house has skimmed from this group's settled pots
+
+
+class PortfolioPoint(BaseModel):
+    t: str    # ISO timestamp
+    v: float  # total credits held across all groups at that time
+
+
+class PortfolioSeries(BaseModel):
+    points: list[PortfolioPoint]
+    balance: float  # current total across all groups
+    start: float    # total credits ever granted (the break-even baseline)
+    pnl: float      # balance - start

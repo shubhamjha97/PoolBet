@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Loader2, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -6,7 +6,18 @@ import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import type { Group } from "@/lib/types";
 import { fmt } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
+import { PortfolioChart, type PortfolioPoint } from "@/components/PortfolioChart";
+
+interface Portfolio { points: PortfolioPoint[]; balance: number; start: number; pnl: number; }
+
+const RANGES = [
+  { k: "1d", label: "1D", ms: 864e5 },
+  { k: "1w", label: "1W", ms: 6048e5 },
+  { k: "1m", label: "1M", ms: 2592e6 },
+  { k: "all", label: "All", ms: Infinity },
+] as const;
 import { useAuth } from "@/lib/auth";
 import { enablePush } from "@/lib/push";
 import { Button } from "@/components/ui/button";
@@ -52,6 +63,22 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [newOpen, setNewOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
+  const [range, setRange] = useState<(typeof RANGES)[number]["k"]>("all");
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    api<Portfolio>("GET", "/users/me/portfolio").then(setPortfolio).catch(() => setPortfolio(null));
+  }, []);
+
+  const rangePoints = useMemo(() => {
+    if (!portfolio) return [];
+    const span = RANGES.find((r) => r.k === range)!.ms;
+    if (!isFinite(span)) return portfolio.points;
+    const cut = Date.now() - span;
+    const f = portfolio.points.filter((p) => new Date(p.t).getTime() >= cut);
+    return f.length >= 2 ? f : portfolio.points;
+  }, [portfolio, range]);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,7 +130,47 @@ export function HomePage() {
 
   return (
     <div className="animate-fade-up space-y-6">
-      {groups.length > 0 && (
+      {portfolio && rangePoints.length >= 2 ? (
+        (() => {
+          const shownV = scrubIndex != null && rangePoints[scrubIndex] ? rangePoints[scrubIndex].v : portfolio.balance;
+          const shownPnl = shownV - portfolio.start;
+          const scrubbed = scrubIndex != null ? rangePoints[scrubIndex] : null;
+          return (
+            <section>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Net balance</div>
+              <div className="mt-1 font-mono text-4xl font-bold tabular-nums">{fmt(shownV)}</div>
+              <div className="mt-1 text-sm">
+                <span className={shownPnl >= 0 ? "text-yes" : "text-no"}>
+                  <span className="font-mono font-semibold tabular-nums">{shownPnl >= 0 ? "+" : ""}{fmt(shownPnl)}</span>
+                </span>{" "}
+                <span className="text-muted-foreground">
+                  {scrubbed ? new Date(scrubbed.t).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "all-time P&L"}
+                </span>
+              </div>
+
+              {/* edge-to-edge, breaking the page gutter */}
+              <div className="-mx-4 mt-3">
+                <PortfolioChart points={rangePoints} start={portfolio.start} scrubIndex={scrubIndex} onScrub={setScrubIndex} />
+              </div>
+
+              <div className="mt-3 flex gap-1.5">
+                {RANGES.map((r) => (
+                  <button
+                    key={r.k}
+                    onClick={() => { setRange(r.k); setScrubIndex(null); haptic("select"); }}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold tabular-nums transition-colors",
+                      range === r.k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        })()
+      ) : groups.length > 0 ? (
         <div className="rounded-2xl border bg-card p-5">
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Net balance</div>
           <div className="mt-1 font-mono text-4xl font-bold tabular-nums">{fmt(totalBalance)}</div>
@@ -115,7 +182,7 @@ export function HomePage() {
             </span>
           </div>
         </div>
-      )}
+      ) : null}
 
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Your groups</h1>

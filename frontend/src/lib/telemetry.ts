@@ -35,26 +35,26 @@ export function initTelemetry(): void {
   track("app_open", { ts: Date.now(), standalone });
 
   let sessionStart = Date.now();
-  let flushed = false;
 
+  // Record time since the last flush, then reset the window so nothing is
+  // double-counted across heartbeats, visibility changes, and unload.
   const flush = () => {
     const seconds = Math.round((Date.now() - sessionStart) / 1000);
-    if (seconds <= 0) return;
-    track("session_ping", { seconds });
+    sessionStart = Date.now();
+    if (seconds > 0) track("session_ping", { seconds });
   };
 
+  // Heartbeat so long, actively-open sessions accrue time incrementally rather
+  // than only when the tab is hidden or closed.
+  const HEARTBEAT_MS = 60_000;
+  setInterval(() => {
+    if (document.visibilityState === "visible") flush();
+  }, HEARTBEAT_MS);
+
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      flush();
-      flushed = true;
-    } else {
-      // Returning to foreground: start a fresh session window.
-      sessionStart = Date.now();
-      flushed = false;
-    }
+    if (document.visibilityState === "hidden") flush();
+    else sessionStart = Date.now(); // fresh window on return to foreground
   });
 
-  window.addEventListener("pagehide", () => {
-    if (!flushed) flush();
-  });
+  window.addEventListener("pagehide", flush);
 }

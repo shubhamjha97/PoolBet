@@ -287,7 +287,14 @@ def group_settlement(
         )
         for frm, to, amount in min_transfers(nets)
     ]
-    return SettlementOut(net=net_out, transfers=transfers)
+
+    # Total rake the house has skimmed from this group's settled pots.
+    rake_payloads = db.scalars(
+        select(Event.payload).where(Event.type == "house_rake", Event.group_id == group_id)
+    ).all()
+    house_take = sum(float((p or {}).get("amount") or 0) for p in rake_payloads)
+
+    return SettlementOut(net=net_out, transfers=transfers, house_take=round(house_take, 2))
 
 
 # ---------- access requests (deep-link join flow) ----------

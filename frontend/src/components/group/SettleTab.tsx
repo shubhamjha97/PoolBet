@@ -22,6 +22,7 @@ interface Transfer {
 interface Settlement {
   net: NetEntry[];
   transfers: Transfer[];
+  house_take: number;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -127,6 +128,12 @@ export function SettleTab({ groupId }: { groupId: string }) {
           </div>
         )}
       </section>
+
+      {data.house_take > 0 && (
+        <p className="text-center text-xs text-muted-foreground">
+          The house has taken <span className="font-mono tabular-nums text-foreground">{fmt(data.house_take)}</span> in rake from settled pots.
+        </p>
+      )}
     </div>
   );
 }

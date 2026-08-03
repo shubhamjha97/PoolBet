@@ -130,15 +130,11 @@ export function GroupPage() {
         <div className="mt-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">your balance</div>
         <div className="font-mono text-[2.7rem] font-extrabold leading-none tracking-tight tabular-nums">{me ? fmt(me.balance) : "—"}</div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => { setShareOpen(true); haptic("select"); }}
-            className="tactile inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm active:scale-95"
-          >
-            <span className="text-muted-foreground">Code</span>
-            <span data-testid="invite-code" className="font-mono tracking-widest text-primary">{group.invite_code}</span>
-            <Share2 className="size-3.5 text-muted-foreground" />
-          </button>
+          <Button variant="outline" size="sm" className="tactile active:scale-95" onClick={() => { setShareOpen(true); haptic("select"); }}>
+            <Share2 className="size-3.5" /> Share
+          </Button>
           <Button variant="outline" size="sm" className="tactile active:scale-95" onClick={buyIn}><Plus className="size-3.5" /> Buy in</Button>
+          <span data-testid="invite-code" className="sr-only">{group.invite_code}</span>
         </div>
       </div>
 

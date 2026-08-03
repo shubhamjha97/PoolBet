@@ -169,7 +169,7 @@ export function HomePage() {
                 </div>
                 {me && (
                   <div className="ml-3 shrink-0 text-right">
-                    <div className="text-lg font-semibold tabular-nums">{fmt(me.balance)}</div>
+                    <div className="text-lg font-semibold font-mono tabular-nums">{fmt(me.balance)}</div>
                     <div className="text-xs text-muted-foreground">balance</div>
                   </div>
                 )}

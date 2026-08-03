@@ -16,8 +16,8 @@ export default {
     container: { center: true, padding: "1rem", screens: { "2xl": "820px" } },
     extend: {
       fontFamily: {
-        sans: ['"Space Grotesk"', "system-ui", "-apple-system", "sans-serif"],
-        mono: ['"SF Mono"', "ui-monospace", "monospace"],
+        sans: ['"Plus Jakarta Sans"', "system-ui", "-apple-system", "sans-serif"],
+        mono: ['"JetBrains Mono"', '"SF Mono"', "ui-monospace", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",

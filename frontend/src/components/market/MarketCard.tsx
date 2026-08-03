@@ -12,7 +12,6 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { ProbabilityChart } from "@/components/Charts";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
@@ -99,7 +98,10 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
           <div className="min-w-0 flex-1 font-medium">{market.question}</div>
           <div className="flex shrink-0 items-center gap-2">
             <span className="tap-target flex items-center justify-center rounded-md text-muted-foreground hover:text-primary" onClick={copyLink} role="button" aria-label="Copy link"><Link2 className="size-4" /></span>
-            <Badge variant="outline" className={cn("gap-1", STATUS_STYLES[market.status])}>{market.status}</Badge>
+            <span className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium", STATUS_STYLES[market.status])}>
+              {market.status === "OPEN" && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+              {market.status}
+            </span>
           </div>
         </div>
         <div className="mt-3">
@@ -109,7 +111,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
           </div>
           <AnimatedOddsBar yesPct={total > 0 ? yes : 50} total={total} />
         </div>
-        <div className="mt-2.5 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-2.5 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
           <span>{market.status === "RESOLVED" ? `resolved · ${market.outcome}` : ci.text} · pot {fmt(total)}</span>
           <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} />
         </div>
@@ -151,7 +153,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
               </div>
               <div className="flex items-center gap-2">
                 <Button type="button" size="icon" variant="outline" className="tap-target tactile active:scale-90" onClick={() => { setAmt(amount - 10); haptic("tap"); }}><Minus className="size-4" /></Button>
-                <Input inputMode="numeric" className="h-11 text-center text-lg font-bold tabular-nums" value={amount} onChange={(e) => setAmt(Number(e.target.value) || 0)} />
+                <Input inputMode="numeric" className="h-11 text-center font-mono text-lg font-bold tabular-nums" value={amount} onChange={(e) => setAmt(Number(e.target.value) || 0)} />
                 <Button type="button" size="icon" variant="outline" className="tap-target tactile active:scale-90" onClick={() => { setAmt(amount + 10); haptic("tap"); }}><Plus className="size-4" /></Button>
                 <Button type="button" size="icon" variant="outline" className="tap-target tactile text-muted-foreground active:scale-90" onClick={() => { setAmt(0); haptic("tap"); }}><RotateCcw className="size-4" /></Button>
               </div>
@@ -239,7 +241,7 @@ export function MarketCard({ market, onRefresh, defaultOpen }: { market: Market;
                       <b className={b.side === "YES" ? "text-yes" : "text-no"}>{b.side}</b>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="tabular-nums">{fmt(b.amount)}{b.payout != null && <> → <b>{fmt(b.payout)}</b></>}</span>
+                      <span className="font-mono tabular-nums">{fmt(b.amount)}{b.payout != null && <> → <b>{fmt(b.payout)}</b></>}</span>
                       {bettable && (
                         <div className="flex gap-1">
                           <button className="tap-target tactile rounded p-1 text-muted-foreground hover:text-yes active:scale-90" title="Match" onClick={() => match(b)}><Copy className="size-3.5" /></button>

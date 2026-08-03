@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus, Loader2, Share2 } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Share2, TrendingUp, Trophy, BarChart3, Scale, ScrollText } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import type { AccessRequest, Group, Market, TimelineEvent } from "@/lib/types";
@@ -122,7 +122,7 @@ export function GroupPage() {
   const buyIn = () => api("POST", `/groups/${id}/buy-in`).then(() => { toast.success("Bought in"); haptic("success"); refresh(); }).catch((e) => toast.error(e.message));
   const approve = (reqId: string) => api("POST", `/groups/${id}/access-requests/${reqId}/approve`).then(() => { toast.success("Approved"); refresh(); }).catch((e) => toast.error(e.message));
   return (
-    <div className="animate-fade-up space-y-5">
+    <div className="space-y-5 pb-12">
       <div>
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> groups</Link>
         <div className="mt-2 flex items-start justify-between gap-3">
@@ -154,13 +154,21 @@ export function GroupPage() {
 
       <LiveFeed events={liveEvents} groupId={id} onLocalEcho={addLocalComment} />
 
-      <Tabs defaultValue="markets">
-        <TabsList className="w-full">
-          <TabsTrigger value="markets" className="flex-1">Markets</TabsTrigger>
-          <TabsTrigger value="ranks" className="flex-1">Ranks</TabsTrigger>
-          <TabsTrigger value="stats" className="flex-1">Stats</TabsTrigger>
-          <TabsTrigger value="settle" className="flex-1">Settle</TabsTrigger>
-          <TabsTrigger value="timeline" className="flex-1">Log</TabsTrigger>
+      <Tabs defaultValue="markets" onValueChange={() => haptic("select")}>
+        <TabsList className="fixed inset-x-0 bottom-0 z-40 grid h-[4.5rem] w-full grid-cols-5 gap-0 rounded-none border-0 border-t border-border bg-background/85 p-0 pb-safe backdrop-blur-xl">
+          {[
+            { v: "markets", label: "Markets", Icon: TrendingUp },
+            { v: "ranks", label: "Ranks", Icon: Trophy },
+            { v: "stats", label: "Stats", Icon: BarChart3 },
+            { v: "settle", label: "Settle", Icon: Scale },
+            { v: "timeline", label: "Log", Icon: ScrollText },
+          ].map(({ v, label, Icon }) => (
+            <TabsTrigger key={v} value={v}
+              className="flex h-full flex-col items-center justify-center gap-1 rounded-none bg-transparent text-muted-foreground shadow-none transition-colors data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none">
+              <Icon className="size-5" />
+              <span className="text-[10px] font-medium tracking-wide">{label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
         <TabsContent value="markets" className="mt-4">
           <MarketsTab group={group} markets={markets} onRefresh={refresh} openMarketId={params.get("market")} />

@@ -80,6 +80,17 @@
   }
   /* tactile press — pairs with active:scale-95 on interactive elements */
   .tactile { @apply transition-transform duration-100 active:scale-95; }
+  /* faint film-grain dither to kill 8-bit gradient banding on dark glows */
+  .noise::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
 }
 
 /* GPU-composited ambient orbs (transform-only → 60fps, ~0 CPU) */
@@ -100,6 +111,12 @@
 @keyframes pb-breathe {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50% { opacity: 0.85; transform: scale(1.08); }
+}
+/* fast one-shot reveal (splash-style), with a slight overshoot */
+@keyframes pb-reveal {
+  0% { opacity: 0; transform: scale(0.45) rotate(-12deg); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

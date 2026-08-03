@@ -23,13 +23,13 @@ function Hero() {
   // wrapped in layered glow + shadow. GPU-only (transform/opacity); reduced to
   // static under prefers-reduced-motion (see index.css).
   return (
-    <div className="relative mx-auto grid size-44 place-items-center" aria-hidden>
-      {/* layered breathing glow */}
-      <div className="absolute size-40 rounded-full bg-yes/25 blur-3xl [animation:pb-breathe_7s_ease-in-out_infinite]" />
-      <div className="absolute size-40 rounded-full bg-no/25 blur-3xl [animation:pb-breathe_7s_ease-in-out_infinite_reverse]" />
+    <div className="relative mx-auto grid size-44 place-items-center [animation:pb-reveal_0.7s_cubic-bezier(.2,.9,.25,1.2)_both]" aria-hidden>
+      {/* breathing glow — radial gradients fade to transparent (no hard blur edge → no banding) */}
+      <div className="absolute size-44 rounded-full [background:radial-gradient(circle,hsl(var(--yes)/0.4),transparent_66%)] [animation:pb-breathe_7s_ease-in-out_infinite]" />
+      <div className="absolute size-44 rounded-full [background:radial-gradient(circle,hsl(var(--no)/0.4),transparent_66%)] [animation:pb-breathe_7s_ease-in-out_infinite_reverse]" />
 
-      {/* orbiting gradient orbs */}
-      <div className="absolute size-full [animation:spin_20s_linear_infinite]">
+      {/* orbiting gradient orbs (start spinning after the reveal) */}
+      <div className="absolute size-full [animation:spin_20s_linear_0.7s_infinite]">
         <div className="absolute left-1/2 top-1 size-[4.5rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-yes to-emerald-300 shadow-[0_18px_50px_-8px_hsl(var(--yes)/0.65)]" />
         <div className="absolute bottom-1 left-1/2 size-[4.5rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-no to-pink-300 shadow-[0_18px_50px_-8px_hsl(var(--no)/0.65)]" />
       </div>
@@ -72,7 +72,7 @@ export function Landing() {
   };
 
   return (
-    <div className="relative z-10 flex min-h-dvh items-center justify-center overflow-hidden px-6 pt-safe pb-safe">
+    <div className="noise relative z-10 flex min-h-dvh items-center justify-center overflow-hidden px-6 pt-safe pb-safe">
       {/* dramatic ambient blobs */}
       <div className="pointer-events-none absolute -left-[8vmax] -top-[14vmax] size-[46vmax] rounded-full bg-yes/20 blur-[80px]" />
       <div className="pointer-events-none absolute -bottom-[16vmax] -right-[10vmax] size-[46vmax] rounded-full bg-no/20 blur-[80px]" />

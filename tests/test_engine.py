@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from app.engine import StakeIn, compute_odds, settle
+from app.engine import StakeIn, compute_odds, outcome_pools, settle, settle_multi
 
 
 def S(bet_id, side, amount):
@@ -131,3 +131,42 @@ def test_invalid_outcome_raises():
         assert False, "expected ValueError"
     except ValueError:
         pass
+
+
+# ---------- N-way (multiple-choice) markets ----------
+def test_outcome_pools_sums_per_label():
+    stakes = [S("a", "Alice", 300), S("b", "Alice", 100), S("c", "Bob", 200)]
+    pools = outcome_pools(stakes)
+    assert pools == {"Alice": Decimal("400"), "Bob": Decimal("200")}
+
+
+def test_settle_multi_winner_splits_post_rake_pot():
+    # Alice pool 400 (a=300,b=100), Bob 200, Carol 100 -> total 700. Alice wins, 5% rake.
+    stakes = [S("a", "Alice", 300), S("b", "Alice", 100), S("c", "Bob", 200), S("d", "Carol", 100)]
+    payouts = settle_multi(stakes, "Alice", rake=Decimal("0.05"))
+    # rake = 700*0.05 = 35 -> distributable 665, split within Alice's 400 pool.
+    assert payouts["a"] == Decimal("498.75")   # 300/400 * 665
+    assert payouts["b"] == Decimal("166.25")   # 100/400 * 665
+    assert payouts["c"] == Decimal("0")
+    assert payouts["d"] == Decimal("0")
+    assert sum(payouts.values()) == Decimal("665.00")  # total minus rake taken
+
+
+def test_settle_multi_no_winner_refunds_and_ignores_rake():
+    stakes = [S("a", "Alice", 300), S("b", "Bob", 200)]
+    payouts = settle_multi(stakes, "Carol", rake=Decimal("0.05"))  # nobody picked Carol
+    assert payouts == {"a": Decimal("300"), "b": Decimal("200")}   # full refund, no rake
+
+
+def test_settle_multi_one_sided_refunds():
+    stakes = [S("a", "Alice", 300), S("b", "Alice", 100)]  # everyone on the winner, no counterparty
+    payouts = settle_multi(stakes, "Alice", rake=Decimal("0.05"))
+    assert payouts == {"a": Decimal("300"), "b": Decimal("100")}
+
+
+def test_settle_multi_conserved_to_the_cent_with_rake():
+    stakes = [S(f"w{i}", "Win", 33) for i in range(7)] + [S(f"l{i}", "Lose", 51) for i in range(3)]
+    total = sum(s.amount for s in stakes)
+    payouts = settle_multi(stakes, "Win", rake=Decimal("0.03"))
+    rake_amount = (total * Decimal("0.03")).quantize(Decimal("0.01"))
+    assert sum(payouts.values()) == total - rake_amount

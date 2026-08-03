@@ -37,21 +37,21 @@
     --card-foreground: 0 0% 100%;
     --popover: 220 14% 9%;
     --popover-foreground: 0 0% 100%;
-    --primary: 152 74% 44%;              /* crisp emerald — reserved for gains/actions */
-    --primary-foreground: 152 85% 6%;
+    --primary: 152 84% 50%;              /* brighter neon emerald — gains/actions */
+    --primary-foreground: 152 90% 6%;
     --secondary: 222 12% 18%;            /* #2A2E37 neutral grey — secondary controls */
     --secondary-foreground: 210 16% 97%;
     --muted: 220 12% 14%;
     --muted-foreground: 220 9% 62%;      /* #8A8F9B dimmed meta-text */
     --accent: 220 12% 16%;
-    --accent-foreground: 152 74% 50%;
-    --destructive: 330 81% 60%;          /* pink-500 */
+    --accent-foreground: 152 84% 56%;
+    --destructive: 335 94% 67%;          /* brighter neon pink */
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 100% / 0.055;         /* very faint — rely on surface contrast, not strokes */
     --input: 0 0% 100% / 0.08;
-    --ring: 152 74% 44%;
-    --yes: 152 74% 46%;                  /* emerald — gains / YES / wins */
-    --no: 330 81% 62%;                   /* pink-500 */
+    --ring: 152 84% 50%;
+    --yes: 152 84% 53%;                  /* brighter neon emerald — gains / YES / wins */
+    --no: 335 94% 67%;                   /* brighter neon pink */
   }
 }
 

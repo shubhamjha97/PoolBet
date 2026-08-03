@@ -19,23 +19,45 @@ const GoogleIcon = () => (
 );
 
 function Hero() {
-  // A single "aurora" orb: green & pink glows bleed between sectors and slowly
-  // swirl into each other (two blurred conic gradients rotating at different
-  // speeds/directions). GPU-only; reveal once, then loop forever.
+  // A Siri-style orb: dark sphere, a hot drifting core, and blurred colour
+  // "blades" swirling at different speeds/directions. No conic gradient (so no
+  // seam line); GPU-only transforms. Reveal once, then loop forever.
   return (
-    <div className="relative mx-auto grid size-44 place-items-center [animation:pb-reveal_0.7s_cubic-bezier(.2,.9,.25,1.2)_both]" aria-hidden>
+    <div className="relative mx-auto grid size-44 place-items-center [animation:pb-reveal_0.65s_cubic-bezier(.2,.9,.25,1.2)_both]" aria-hidden>
       {/* soft outer glow */}
-      <div className="absolute size-44 rounded-full [background:radial-gradient(circle,hsl(var(--yes)/0.28),hsl(var(--no)/0.22)_55%,transparent_72%)] blur-md [animation:pb-breathe_8s_ease-in-out_infinite]" />
+      <div className="absolute size-44 rounded-full [background:radial-gradient(circle,hsl(var(--yes)/0.3),hsl(var(--no)/0.24)_58%,transparent_72%)] blur-lg [animation:pb-breathe_6s_ease-in-out_infinite]" />
 
-      {/* the orb */}
-      <div className="noise relative size-36 overflow-hidden rounded-full shadow-[0_22px_60px_-12px_hsl(var(--no)/0.55)] ring-1 ring-white/10">
-        {/* swirling colour fields — blurred conic gradients, layered + counter-rotating */}
-        <div className="absolute -inset-1/2 [background:conic-gradient(from_0deg,hsl(var(--yes)),hsl(var(--no)),hsl(var(--yes)),hsl(var(--no)),hsl(var(--yes)))] blur-2xl [animation:spin_16s_linear_infinite]" />
-        <div className="absolute -inset-1/2 opacity-70 [background:conic-gradient(from_140deg,hsl(var(--no)),transparent,hsl(var(--yes)),transparent,hsl(var(--no)))] blur-2xl [animation:spin_11s_linear_infinite_reverse]" />
-        {/* glassy top-left sheen for depth */}
-        <div className="absolute inset-0 [background:radial-gradient(circle_at_32%_26%,rgba(255,255,255,0.28),transparent_46%)]" />
-        {/* inner edge vignette so the rim reads as a sphere */}
-        <div className="absolute inset-0 rounded-full shadow-[inset_0_-10px_30px_-10px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.15)]" />
+      {/* the sphere */}
+      <div className="relative size-40 overflow-hidden rounded-full ring-1 ring-white/15 shadow-[0_0_50px_-8px_hsl(var(--no)/0.5)]">
+        {/* dark base */}
+        <div className="absolute inset-0 bg-[#050405]" />
+
+        {/* colour corona — bright blobs orbit near the rim so the CENTRE stays dark */}
+        <div className="absolute inset-0 [animation:spin_7s_linear_infinite]">
+          <div className="absolute left-1/2 top-[3%] size-[42%] -translate-x-1/2 rounded-full blur-lg [background:radial-gradient(circle,hsl(var(--yes)),transparent_66%)]" />
+          <div className="absolute bottom-[3%] left-1/2 size-[42%] -translate-x-1/2 rounded-full blur-lg [background:radial-gradient(circle,hsl(var(--no)),transparent_66%)]" />
+        </div>
+        <div className="absolute inset-0 [animation:spin_9s_linear_infinite_reverse]">
+          <div className="absolute left-[2%] top-1/2 size-[38%] -translate-y-1/2 rounded-full blur-lg opacity-90 [background:radial-gradient(circle,#6ee7b7,transparent_66%)]" />
+          <div className="absolute right-[4%] top-[26%] size-[34%] rounded-full blur-lg opacity-80 [background:radial-gradient(circle,hsl(var(--no)),transparent_66%)]" />
+        </div>
+
+        {/* keep the very centre dark (drifts subtly for life) */}
+        <div className="absolute inset-0 [animation:pb-drift_7s_ease-in-out_infinite]">
+          <div className="absolute left-1/2 top-1/2 size-[62%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-lg [background:radial-gradient(circle,#050405_38%,transparent_72%)]" />
+        </div>
+
+        {/* thin bright blades sweeping across (Siri detail) */}
+        <div className="absolute inset-0 [animation:spin_6s_linear_infinite]">
+          <div className="absolute left-1/2 top-1/2 h-[11%] w-[130%] -translate-x-1/2 -translate-y-1/2 rounded-full blur-md opacity-70 [background:radial-gradient(ellipse,rgba(190,255,225,0.95),hsl(var(--yes)/0.5)_40%,transparent_72%)]" />
+        </div>
+        <div className="absolute inset-0 [animation:spin_8s_linear_infinite_reverse]">
+          <div className="absolute left-1/2 top-1/2 h-[9%] w-[124%] -translate-x-1/2 -translate-y-1/2 rotate-[68deg] rounded-full blur-md opacity-60 [background:radial-gradient(ellipse,rgba(255,190,230,0.95),hsl(var(--no)/0.5)_40%,transparent_72%)]" />
+        </div>
+
+        {/* glassy top-left sheen + rim vignette for sphere depth */}
+        <div className="absolute inset-0 [background:radial-gradient(circle_at_34%_28%,rgba(255,255,255,0.18),transparent_44%)]" />
+        <div className="absolute inset-0 rounded-full shadow-[inset_0_-14px_30px_-14px_rgba(0,0,0,0.7),inset_0_2px_6px_rgba(255,255,255,0.2)]" />
       </div>
     </div>
   );

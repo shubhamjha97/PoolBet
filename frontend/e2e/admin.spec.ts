@@ -12,22 +12,31 @@ async function login(page: Page, name: string) {
 }
 
 test.describe("admin", () => {
-  test("commit log is visible and a rollback succeeds", async ({ page }) => {
+  test("unified commit log shows restore points and a rollback succeeds", async ({ page }) => {
     await login(page, "Ava");
     await page.goto("/#/admin");
 
     await expect(page.getByRole("heading", { name: "Admin" })).toBeVisible();
-    await expect(page.getByText("Rollback points", { exact: true })).toBeVisible();
     await expect(page.getByText("Commit log", { exact: true })).toBeVisible();
+    // the separate "Rollback points" section is gone — rollback lives on the log now
+    await expect(page.getByText("Rollback points")).toHaveCount(0);
 
-    // roll back to the first snapshot → confirm
-    await page.getByRole("button", { name: /Roll back/ }).first().click();
+    // widen to the whole log so restore-point events are in view
+    await page.getByRole("button", { name: "All", exact: true }).click();
+
+    // an eligible event carries an inline rollback button
+    const rb = page.getByTestId("rollback-btn").first();
+    await expect(rb).toBeVisible();
+    await rb.click();
+
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: /Roll back/ }).click();
 
-    // success toast, and the dialog closes
-    await expect(page.getByText("Rolled back", { exact: true })).toBeVisible(); // the toast (not "State rolled back" log lines)
+    // success toast + the confirm dialog closes; the app stays functional
+    await expect(page.getByText("Rolled back", { exact: true })).toBeVisible();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("Commit log", { exact: true })).toBeVisible();
   });
 
   test("metrics tiles render and the house rake saves", async ({ page }) => {

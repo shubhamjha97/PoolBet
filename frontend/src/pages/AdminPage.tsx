@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -127,6 +127,14 @@ export function AdminPage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  // A restore point is a snapshot taken right after an event — key by that event
+  // so the commit log can show a rollback button inline on eligible events.
+  const snapByEvent = useMemo(() => {
+    const m: Record<string, Snapshot> = {};
+    for (const s of snaps) if (s.after_event_id) m[s.after_event_id] = s;
+    return m;
+  }, [snaps]);
+
   const loadEvents = useCallback(async () => {
     const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(page * PAGE_SIZE) });
     if (start) params.set("start", start);
@@ -238,28 +246,8 @@ export function AdminPage() {
       </div>
 
       <div>
-        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Rollback points</div>
-        {snaps.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No snapshots yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {snaps.map((sn) => (
-              <div key={sn.id} className="flex items-center justify-between rounded-xl border bg-card p-3">
-                <div>
-                  <div className="text-sm font-medium">{sn.label || "snapshot"}</div>
-                  <div className="text-xs text-muted-foreground">{timeAgo(sn.created_at)}</div>
-                </div>
-                <Button variant="destructive" size="sm" className="tactile active:scale-95" onClick={() => { haptic("tap"); setConfirm(sn); }}>
-                  <RotateCcw className="size-3.5" /> Roll back
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
-        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Commit log</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Commit log</div>
+        <p className="mb-2 text-xs text-muted-foreground">Every action, newest first. Events marked a restore point can roll the whole app back to that moment.</p>
 
         {/* quick range chips */}
         <div className="mb-2 flex flex-wrap gap-1.5">
@@ -295,20 +283,26 @@ export function AdminPage() {
           <p className="text-sm text-muted-foreground">No events in this range.</p>
         ) : (
           <div className="space-y-0">
-            {events.map((e, i) => (
-              <button
-                key={e.id}
-                onClick={() => { haptic("select"); setSelected(e); }}
-                className="relative flex w-full gap-3 pb-3 text-left"
-              >
-                {i < events.length - 1 && <span className="absolute left-[4px] top-3 h-full w-px bg-border" />}
-                <span className="relative z-10 mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm">{line(e)}</div>
-                  <div className="text-xs text-muted-foreground">{timeAgo(e.ts)} · tap for details</div>
+            {events.map((e, i) => {
+              const snap = snapByEvent[e.id];
+              return (
+                <div key={e.id} className="relative flex items-start gap-3 pb-3">
+                  {i < events.length - 1 && <span className="absolute left-[4px] top-3 h-full w-px bg-border" />}
+                  <span className={cn("relative z-10 mt-1.5 size-2 shrink-0 rounded-full", snap ? "bg-primary ring-2 ring-primary/30" : "bg-muted-foreground/40")} />
+                  <button onClick={() => { haptic("select"); setSelected(e); }} className="min-w-0 flex-1 text-left">
+                    <div className="truncate text-sm">{line(e)}</div>
+                    <div className="text-xs text-muted-foreground">{timeAgo(e.ts)}{snap ? " · restore point" : ""} · tap for details</div>
+                  </button>
+                  {snap && (
+                    <Button variant="outline" size="sm" data-testid="rollback-btn"
+                      className="tactile shrink-0 text-destructive hover:text-destructive active:scale-95"
+                      onClick={() => { haptic("tap"); setConfirm(snap); }}>
+                      <RotateCcw className="size-3.5" /> Roll back
+                    </Button>
+                  )}
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         )}
 

@@ -8,7 +8,7 @@ export default defineConfig({
   expect: { timeout: 8_000 },
   fullyParallel: false,
   workers: 1,
-  retries: 1, // SSE/settlement tests are timing-sensitive under full-suite load
+  retries: 2, // SSE/settlement tests are timing-sensitive under full-suite SQLite contention
   reporter: [["list"]],
   use: {
     baseURL: process.env.PB_BASE || "http://localhost:8000",

@@ -11,7 +11,7 @@ from .database import Base, engine, get_db
 from .deps import current_user, require_membership
 from .models import Membership, User
 from .push import init_vapid
-from .routers import admin, auth, events, groups, leaderboard, live, markets, oauth, push, users
+from .routers import admin, auth, events, groups, leaderboard, live, markets, oauth, push, reactions, users
 from .schemas import MemberOut
 
 # Importing snapshots registers the after-commit listeners that append a Snapshot
@@ -58,6 +58,7 @@ app.include_router(push.router)
 app.include_router(oauth.router)
 app.include_router(admin.router)
 app.include_router(leaderboard.router)
+app.include_router(reactions.router)
 app.include_router(live.router)
 
 

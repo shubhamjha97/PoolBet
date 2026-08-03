@@ -297,6 +297,19 @@ class Setting(Base):
     value: Mapped[str] = mapped_column(String, nullable=False)
 
 
+class Reaction(Base):
+    """An emoji reaction on a feed/timeline event. One row per (event, user, emoji)."""
+    __tablename__ = "reactions"
+    __table_args__ = (UniqueConstraint("event_id", "user_id", "emoji", name="uq_reaction"),)
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    event_id: Mapped[str] = mapped_column(ForeignKey("events.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    group_id: Mapped[str] = mapped_column(ForeignKey("groups.id"), nullable=False, index=True)
+    emoji: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 def get_setting(db, key: str, default: str | None = None) -> str | None:
     """Read a global setting, returning `default` when unset."""
     row = db.get(Setting, key)

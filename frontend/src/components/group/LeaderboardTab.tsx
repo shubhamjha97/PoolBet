@@ -74,8 +74,14 @@ export function LeaderboardTab({ groupId }: { groupId: string }) {
       {board.map((e, i) => {
         const you = e.user_id === user?.id;
         const positive = e.pnl >= 0;
+        // Metallic podium glow for the top 3.
+        const podium = [
+          "shadow-[0_0_0_1px_rgba(255,215,0,0.35),0_0_18px_-4px_rgba(255,215,0,0.4)]",
+          "shadow-[0_0_0_1px_rgba(192,192,192,0.3),0_0_16px_-5px_rgba(192,192,192,0.35)]",
+          "shadow-[0_0_0_1px_rgba(205,127,50,0.3),0_0_16px_-5px_rgba(205,127,50,0.35)]",
+        ][i];
         return (
-          <Card key={e.user_id} className="flex items-center gap-3 px-3 py-2.5">
+          <Card key={e.user_id} className={`flex items-center gap-3 px-3 py-2.5 ${podium ?? ""}`}>
             {/* Rank: medal for top 3, number otherwise. */}
             <div className="w-6 shrink-0 text-center font-mono tabular-nums text-sm text-muted-foreground">
               {i < 3 ? <span className="text-base">{MEDALS[i]}</span> : i + 1}
